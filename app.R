@@ -51,54 +51,12 @@ if (!isTruthy(human)) {
   }
 }
 
-#gs <- loadRData(GeneSet_File)
-#gs_cat <- as.data.frame(read_delim(GeneSetCat_File, delim = '\t', col_names = T))
-#genesetCats <- unique(gs_cat[,1])
-#gs_cat2 <- gs_cat[,-2]
-#colnames(gs_cat2)[c(2,3)] <- c("Gene Set Category","Gene Set Name")
-
-
 Path_Selec <- NULL
 
 umap.mod <- umap.defaults
 
 #increase file upload size
 options(shiny.maxRequestSize=5000*1024^2)
-
-##--Read in Expr and Meta--##
-
-###reading expression data
-#exprIn <- as.data.frame(read_delim(ExpressionMatrix_file, delim = '\t', col_names = T))
-#colnames(exprIn)[1] <- "Gene"
-## Remove Expression with NA
-#exprIn <- exprIn %>%
-#  drop_na()
-## Check that expression data is numeric
-#isChar <- unname(which(sapply(exprIn, function(x) is.character(x))))
-#isChar <-  isChar[-1]
-#if (length(isChar) > 0) {
-#  exprIn[isChar] <- sapply(exprIn[isChar],as.numeric)
-#}
-## Remove Duplicate genes
-#if (TRUE %in% duplicated(exprIn[,1])) {
-#  exprIn <- exprIn %>%
-#    group_by(Gene) %>%
-#    summarise_all(max)
-#}
-## Harmonize special characters in sample names
-#colnames(exprIn) <- gsub("[[:punct:]]", ".", colnames(exprIn))
-#
-#metaIn <- as.data.frame(read_delim(MetaData_file, delim = '\t', col_names = T))
-#metaIn[,1] <- gsub("[[:punct:]]", ".", metaIn[,1])
-#colnames(metaIn)[1] <- "SampleName"
-#
-#
-##for heatmap sample selection
-#sampsames <- intersect(colnames(exprIn),metaIn[,1])
-##ensure expression samples and meta are exact
-#exprIn <- exprIn[,c("Gene",sampsames)]
-#metaIn <- metaIn[which(metaIn[,1] %in% sampsames),]
-
 
 # Password Table ---------------------------------------------------------------
 # user database for login
