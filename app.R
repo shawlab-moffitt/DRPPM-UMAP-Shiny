@@ -1,17 +1,15 @@
 
+# last update - 20250603 - 3:55pm
 
 # User Input -------------------------------------------------------------------
 
 ProjectName <- ''
-#ProjectName <- 'TCGA CHOL'
 
 ExpressionMatrix_file <- ''
-#ExpressionMatrix_file <- 'TCGA_CHOL_Expression_PatientID.txt'
 
 MetaData_file <- ''
-#MetaData_file <- 'TCGA_CHOL_Clinical_PatientID.txt'
 
-human <- TRUE
+human <- 'TRUE'
 
 
 ## Provided Input --------------------------------------------------------------
@@ -25,7 +23,7 @@ ExampleClin_File <- "Example_Data/TCGA_CHOL_Clinical_PatientID.txt"
 
 ## Password Settings -----------------------------------------------------------
 Password_Protected <- FALSE
-PasswordSet <- ""
+PasswordSet <- ''
 
 
 
@@ -72,8 +70,8 @@ if (Password_Protected) {
 # UI Tabs ----------------------------------------------------------------------
 ## Login Tab -------------------------------------------------------------------
 login_tab <- tabPanel(
-  title = icon("lock"), 
-  value = "login", 
+  title = icon("lock"),
+  value = "login",
   loginUI("login")
 )
 
@@ -149,7 +147,13 @@ umap_tab <- tabPanel("UMAP",
                                                               id = "AnnoUMAP",
                                                               tabPanel("Clinical",
                                                                        p(),
-                                                                       uiOutput("rendUMAPannotateSamps"),
+                                                                       #uiOutput("rendUMAPannotateSamps"),
+                                                                       selectizeInput("UMAPannotateSamps","Annotate Samples By:",
+                                                                                      choices = NULL, selected = 1,
+                                                                                      options = list(
+                                                                                        placeholder = 'Please select an option below',
+                                                                                        onInitialize = I('function() { this.setValue(""); }')
+                                                                                      )),
                                                                        fluidRow(
                                                                          column(6, style = 'margin-top:-20px;',
                                                                                 #uiOutput("rendUMAPannotateSamps")
@@ -604,7 +608,7 @@ if (Password_Protected) {
 
 server <- function(input, output, session) {
   
-  # hack to add the logout button to the navbar on app launch 
+  # hack to add the logout button to the navbar on app launch
   if (Password_Protected) {
     insertUI(
       selector = ".navbar .container-fluid .navbar-collapse",
@@ -651,7 +655,7 @@ server <- function(input, output, session) {
       if (credentials()$user_auth) {
         # remove the login tab
         removeTab("tabs", "login")
-        # add home tab 
+        # add home tab
         if (!FileProvided) {
           appendTab("tabs", DataInput_tab, select = TRUE)
           appendTab("tabs", umap_tab, select = FALSE)
@@ -830,7 +834,7 @@ server <- function(input, output, session) {
               meta <- readRDS(url(MetaData_file_react()))
             }
           }
-          colnames(meta)[1] <- "SampleName"
+          #colnames(meta_react())[1] <- "SampleName"
           
           # Ensure expression samples and meta are exact
           sampsames <- intersect(colnames(expr),meta[,1])
@@ -926,22 +930,31 @@ server <- function(input, output, session) {
         meta <- meta_react()
         samples <- c("Select All Samples",union(colnames(expr),meta[,1]))
         selectizeInput(
-          "UMAPsampSelect", 
+          "UMAPsampSelect",
           label = "Select Samples:",
-          choices = samples, 
+          choices = samples,
           multiple = T,
           selected = "",
           options = list(delimiter = " ", create = T)
         )
       })
       
-      output$rendUMAPannotateSamps <- renderUI({
-        
+      #output$rendUMAPannotateSamps <- renderUI({
+      #  meta <- meta_react()
+      #  anno_options <- colnames(meta)[2:ncol(meta)]
+      #  anno_options <- c(" ",anno_options)
+      #  selectInput("UMAPannotateSamps","Annotate Samples By:", choices = anno_options, multiple = F)
+      #})
+      
+      observe({
+        req(meta_react())
         meta <- meta_react()
-        anno_options <- colnames(meta)[2:ncol(meta)]
-        anno_options <- c(" ",anno_options)
-        selectInput("UMAPannotateSamps","Annotate Samples By:", choices = anno_options, multiple = F)
-        
+        anno_options <- colnames(meta)[-1]
+        updateSelectizeInput(session,"UMAPannotateSamps","Annotate Samples By:", choices = anno_options,
+                             options = list(
+                               placeholder = 'Please select an option below',
+                               onInitialize = I('function() { this.setValue(""); }')
+                             ))
       })
       
       output$rendUMAPannoContCheck <- renderUI({
@@ -1046,9 +1059,9 @@ server <- function(input, output, session) {
       })
       
       #observeEvent(input$RadioPathSelect, {
-      #  
+      #
       #  #selec_input <- as.character(input$RadioPathSelect)
-      #  
+      #
       #  updateRadioButtons(session, "RadioPathSelect",
       #                     label = "",
       #                     choices = c("Provided Genesets","Upload Genesets"),
@@ -1276,19 +1289,19 @@ server <- function(input, output, session) {
       })
       
       #output$rendLowlyFilterNum <- renderUI({
-      #  
+      #
       #  if (input$FilterLowlyExpr == T) {
       #    numericInput("LowlyFilterNum", "Filter rowSums Below:", value = 1)
       #  }
-      #  
+      #
       #})
       
       #output$rendHighlyFilterNum <- renderUI({
-      #  
+      #
       #  if (input$FilterLowlyExpr == T) {
       #    numericInput("HighlyFilterNum", "Filter rowSums Above:", value = "")
       #  }
-      #  
+      #
       #})
       
       output$rendBPsampSubset <- renderUI({
@@ -1386,7 +1399,7 @@ server <- function(input, output, session) {
       output$rendUMAPminDist <- renderUI({
         
         if (input$MainUMAPpan %in% c(4,3,2)) {
-          numericInput("UMAPminDist","Min Distance:", 
+          numericInput("UMAPminDist","Min Distance:",
                        #value = 0.1,
                        value = UMAP_minDistSelec$minDistSelec_Var,
                        step = 0.05, min = 0)
@@ -1536,7 +1549,7 @@ server <- function(input, output, session) {
       
       ### User Matrix Upload
       #expr_raw <- reactive({
-      #  
+      #
       #  #gs.u <- input$UMAPmatrixFile
       #  #ext <- tools::file_ext(gs.u$datapath)
       #  #req(gs.u)
@@ -1548,9 +1561,9 @@ server <- function(input, output, session) {
       #  #else {
       #  #  matrix.u <- as.data.frame(read_delim(gs.u$datapath, delim = '\t', col_names = T))
       #  #}
-      #  
+      #
       #  matrix.u <- exprIn
-      #  
+      #
       #  #if (input$FeatRowOrCols == "Cols as Feat. - Rows as Samples") {
       #  #  rownames(matrix.u) <- matrix.u[,1]
       #  #  matrix.u <- matrix.u[,-1]
@@ -1575,17 +1588,17 @@ server <- function(input, output, session) {
       #  rownames(matrix.u) <- matrix.u[,1]
       #  matrix.u <- matrix.u[,-1]
       #  colnames(matrix.u) <- gsub("[[:punct:]]",".",colnames(matrix.u))
-      #  
+      #
       #  #expr_raw <- matrix.u
       #  matrix.u
-      #  
+      #
       #})
       #
       #umap_matrix_loaded <- reactive({
-      #  
+      #
       #  matrix.u <- expr_raw()
       #  matrix.u2 <- matrix.u
-      #  
+      #
       #  if (input$FilterLowlyExpr == T) {
       #    if (!is.na(input$LowlyFilterNum)) {
       #      matrix.u <- matrix.u[which(rowSums(matrix.u, na.rm = T) > input$LowlyFilterNum),]
@@ -1594,7 +1607,7 @@ server <- function(input, output, session) {
       #      matrix.u <- matrix.u[which(rowSums(matrix.u, na.rm = T) < input$HighlyFilterNum),]
       #    }
       #  }
-      #  
+      #
       #  if (input$LogUMAPmatrix == T) {
       #    matrix.u <- log2(matrix.u + 0.00001)
       #  }
@@ -1603,17 +1616,17 @@ server <- function(input, output, session) {
       #    matrix.u = apply(matrix.u, 1, rev)
       #    colnames(matrix.u) <- colnames(matrix.u2)
       #  }
-      #  
+      #
       #  matrix.u <- as.matrix(matrix.u[sort(rownames(matrix.u)),])
-      #  
+      #
       #  #expr_reac <- matrix.u
       #  matrix.u
-      #  
+      #
       #})
       #
       ### User Meta Upload
       #umap_meta_loaded <- reactive({
-      #  
+      #
       #  #gs.u <- input$UMAPmetaFile
       #  #ext <- tools::file_ext(gs.u$datapath)
       #  #req(gs.u)
@@ -1626,13 +1639,13 @@ server <- function(input, output, session) {
       #  #  meta.u <- as.data.frame(read_delim(gs.u$datapath, delim = '\t', col_names = T))
       #  #}
       #  meta.u <- metaIn
-      #  
+      #
       #  colnames(meta.u)[1] <- "SampleName"
       #  meta.u$SampleName <- gsub("[[:punct:]]",".",meta.u$SampleName)
-      #  
+      #
       #  #umap_meta_loaded <- meta.u
       #  meta.u
-      #  
+      #
       #})
       
       ## User Geneset Upload
@@ -1777,7 +1790,7 @@ server <- function(input, output, session) {
         results2 = hclust(dist(as.matrix(t(df))), method = clust_me)
         m = sort(cutree(results2, k=cut_k))
         output = as.data.frame(cbind(colnames(m), as.matrix(m)))
-        output$SampleName <- rownames(output)
+        output[,colnames(meta_react())[1]] <- rownames(output)
         output2 <- output[,c(2,1)]
         colnames(output2)[2] <- "Cluster"
         output2$Cluster <- as.factor(output2$Cluster)
@@ -1794,7 +1807,7 @@ server <- function(input, output, session) {
         df <- as.data.frame(df)
         meta <- meta_react()
         if (isTruthy(input$UMAPannotateSamps)) {
-          if (input$UMAPannotateSamps != " ") {
+          if (input$UMAPannotateSamps != "") {
             if (input$RemoveNAsAnno == TRUE) {
               NAsamps <- meta[which(is.na(meta[,input$UMAPannotateSamps])),1]
               df <- df[,which(!colnames(df) %in% NAsamps)]
@@ -1878,9 +1891,9 @@ server <- function(input, output, session) {
             rename(UMAP1="V1",
                    UMAP2="V2") %>%
             mutate(ID=row_number())
-          tdata_fit_df$SampleName <- rownames(tdata_fit_df)
+          tdata_fit_df[,colnames(meta_react())[1]] <- rownames(tdata_fit_df)
           tdata_fit_df <- tdata_fit_df %>%
-            relocate(SampleName)
+            relocate(any_of(colnames(meta_react())[1]))
           
           
           #umap_plot_table_MVG_react <- tdata_fit_df
@@ -1896,7 +1909,7 @@ server <- function(input, output, session) {
         df <- expr_react()
         df <- as.data.frame(df)
         meta <- meta_react()
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           if (input$RemoveNAsAnno == TRUE) {
             NAsamps <- meta[which(is.na(meta[,input$UMAPannotateSamps])),1]
             df <- df[,which(!colnames(df) %in% NAsamps)]
@@ -1970,9 +1983,9 @@ server <- function(input, output, session) {
           rename(UMAP1="V1",
                  UMAP2="V2") %>%
           mutate(ID=row_number())
-        tdata_fit_df$SampleName <- rownames(tdata_fit_df)
+        tdata_fit_df[,colnames(meta_react())[1]] <- rownames(tdata_fit_df)
         tdata_fit_df <- tdata_fit_df %>%
-          relocate(SampleName)
+          relocate(any_of(colnames(meta_react())[1]))
         
         
         tdata_fit_df
@@ -1985,7 +1998,7 @@ server <- function(input, output, session) {
         df <- expr_react()
         df <- as.data.frame(df)
         meta <- meta_react()
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           if (input$RemoveNAsAnno == TRUE) {
             NAsamps <- meta[which(is.na(meta[,input$UMAPannotateSamps])),1]
             df <- df[,which(!colnames(df) %in% NAsamps)]
@@ -2056,9 +2069,9 @@ server <- function(input, output, session) {
           rename(UMAP1="V1",
                  UMAP2="V2") %>%
           mutate(ID=row_number())
-        tdata_fit_df$SampleName <- rownames(tdata_fit_df)
+        tdata_fit_df[,colnames(meta_react())[1]] <- rownames(tdata_fit_df)
         tdata_fit_df <- tdata_fit_df %>%
-          relocate(SampleName)
+          relocate(any_of(colnames(meta_react())[1]))
         
         
         tdata_fit_df
@@ -2073,7 +2086,7 @@ server <- function(input, output, session) {
         umap1 <- input$SelectPreCalc1
         umap2 <- input$SelectPreCalc2
         
-        tdata_fit_df <- meta[,c("SampleName",umap1,umap2)]
+        tdata_fit_df <- meta[,c(colnames(meta_react())[1],umap1,umap2)]
         if (ncol(tdata_fit_df) >= 3) {
           colnames(tdata_fit_df)[c(2,3)] <- c("UMAP1","UMAP2")
         }
@@ -2169,7 +2182,7 @@ server <- function(input, output, session) {
       })
       
       #output$PathSelectTable <- DT::renderDataTable({
-      #  
+      #
       #  if (input$RadioPathSelect == "Provided Genesets") {
       #    if (Path_Selec$row_selec == 0) {
       #      chosen_cat <- input$GeneSetCatSelect
@@ -2225,7 +2238,7 @@ server <- function(input, output, session) {
       #                    rownames = F)
       #    }
       #  }
-      #  
+      #
       #})
       
       output$MVGlist <- renderDataTable({
@@ -2266,11 +2279,11 @@ server <- function(input, output, session) {
             expr2 <- as.data.frame(expr)
             expr_g <- expr2[feat,]
             expr_g_t <- as.data.frame(t(expr_g))
-            expr_g_t$SampleName <- rownames(expr_g_t)
+            expr_g_t[,colnames(meta_react())[1]] <- rownames(expr_g_t)
             expr_g_t
           }
           else if (feat %in% colnames(meta)) {
-            expr_g_t <- meta[,c("SampleName",feat)]
+            expr_g_t <- meta[,c(colnames(meta_react())[1],feat)]
             expr_g_t
           }
         }
@@ -2283,7 +2296,7 @@ server <- function(input, output, session) {
           expr2 <- as.data.frame(expr)
           expr_g <- expr2[feat,]
           expr_g_t <- as.data.frame(t(expr_g))
-          expr_g_t$SampleName <- rownames(expr_g_t)
+          expr_g_t[,colnames(meta_react())[1]] <- rownames(expr_g_t)
           expr_g_t
         }
         
@@ -2294,14 +2307,19 @@ server <- function(input, output, session) {
         tdata_fit_df <- umap_plot_table_MVG_react()
         tdata_fit_df <- tdata_fit_df[,-4]
         
-        ## Add Annotation column
+        UMAPannotateSamps <- input$UMAPannotateSamps
         metaColanno <- input$UMAPannotateSamps
+        meta <- meta_react()
+        #save(list = ls(), file = "UMAP_MVG_CoordTable_react.RData", envir = environment())
+        
+        ## Add Annotation column
         #if (is.null(input$UMAPmetaFile) == F) {
-        if (!is.null(input$UMAPannotateSamps)) {
-          if (input$UMAPannotateSamps != " ") {
-            meta <- meta_react()
-            metaColanno <- input$UMAPannotateSamps
-            tdata_fit_df <- merge(tdata_fit_df,meta[,c("SampleName",metaColanno)])
+        if (!is.null(metaColanno)) {
+          if (metaColanno != "") {
+            tdata_fit_df <- merge(tdata_fit_df,
+                                  meta[,c(colnames(meta)[1],metaColanno)],
+                                  by.x = colnames(tdata_fit_df)[1],
+                                  by.y = colnames(meta)[1])
           }
           
         }
@@ -2311,11 +2329,11 @@ server <- function(input, output, session) {
         expr <- expr_raw()
         if (!is.null(input$GeneSelection)) {
           expr_g_t <- FeatExpreAnnotation()
-          tdata_fit_df <- merge(tdata_fit_df,expr_g_t, by = "SampleName")
+          tdata_fit_df <- merge(tdata_fit_df,expr_g_t, by = colnames(meta_react())[1])
         }
         else if (is.null(input$GeneSelection)) {
           expr_g_t <- FeatExpreAnnotation()
-          tdata_fit_df <- merge(tdata_fit_df,expr_g_t, by = "SampleName")
+          tdata_fit_df <- merge(tdata_fit_df,expr_g_t, by = colnames(meta_react())[1])
         }
         
         
@@ -2323,7 +2341,7 @@ server <- function(input, output, session) {
         ## Add Cluster Annotation Column
         cluster_tab <- umapClusterTable_react()
         metaColkmean <- "Cluster"
-        tdata_fit_df <- merge(tdata_fit_df,cluster_tab, by = "SampleName")
+        tdata_fit_df <- merge(tdata_fit_df,cluster_tab, by = colnames(meta_react())[1])
         
         tdata_fit_df
         
@@ -2355,10 +2373,10 @@ server <- function(input, output, session) {
         ## Add Annotation column
         metaColanno <- input$UMAPannotateSamps
         #if (is.null(input$UMAPmetaFile) == F) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           meta <- meta_react()
           metaColanno <- input$UMAPannotateSamps
-          tdata_fit_df <- merge(tdata_fit_df,meta[,c("SampleName",metaColanno)])
+          tdata_fit_df <- merge(tdata_fit_df,meta[,c(colnames(meta_react())[1],metaColanno)])
         }
         #}
         
@@ -2366,16 +2384,16 @@ server <- function(input, output, session) {
         expr <- expr_raw()
         if (!is.null(input$GeneSelection)) {
           expr_g_t <- FeatExpreAnnotation()
-          tdata_fit_df <- merge(tdata_fit_df,expr_g_t, by = "SampleName")
+          tdata_fit_df <- merge(tdata_fit_df,expr_g_t, by = colnames(meta_react())[1])
         }
         else if (is.null(input$GeneSelection)) {
           expr_g_t <- FeatExpreAnnotation()
-          tdata_fit_df <- merge(tdata_fit_df,expr_g_t, by = "SampleName")
+          tdata_fit_df <- merge(tdata_fit_df,expr_g_t, by = colnames(meta_react())[1])
         }
         ## Add Cluster Annotation Column
         cluter_tab <- umapClusterTable_react()
         metaColkmean <- "Cluster"
-        tdata_fit_df <- merge(tdata_fit_df,cluter_tab, by = "SampleName")
+        tdata_fit_df <- merge(tdata_fit_df,cluter_tab, by = colnames(meta_react())[1])
         
         tdata_fit_df
         
@@ -2405,10 +2423,10 @@ server <- function(input, output, session) {
         ## Add Annotation column
         metaColanno <- input$UMAPannotateSamps
         #if (is.null(input$UMAPmetaFile) == F) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           meta <- meta_react()
           metaColanno <- input$UMAPannotateSamps
-          tdata_fit_df <- merge(tdata_fit_df,meta[,c("SampleName",metaColanno)])
+          tdata_fit_df <- merge(tdata_fit_df,meta[,c(colnames(meta_react())[1],metaColanno)])
         }
         #}
         
@@ -2416,17 +2434,17 @@ server <- function(input, output, session) {
         expr <- expr_raw()
         if (!is.null(input$GeneSelection)) {
           expr_g_t <- FeatExpreAnnotation()
-          tdata_fit_df <- merge(tdata_fit_df,expr_g_t, by = "SampleName")
+          tdata_fit_df <- merge(tdata_fit_df,expr_g_t, by = colnames(meta_react())[1])
         }
         else if (is.null(input$GeneSelection)) {
           expr_g_t <- FeatExpreAnnotation()
-          tdata_fit_df <- merge(tdata_fit_df,expr_g_t, by = "SampleName")
+          tdata_fit_df <- merge(tdata_fit_df,expr_g_t, by = colnames(meta_react())[1])
         }
         
         ## Add Cluster Annotation Column
         cluter_tab <- umapClusterTable_react()
         metaColkmean <- "Cluster"
-        tdata_fit_df <- merge(tdata_fit_df,cluter_tab, by = "SampleName")
+        tdata_fit_df <- merge(tdata_fit_df,cluter_tab, by = colnames(meta_react())[1])
         
         tdata_fit_df
         
@@ -2457,10 +2475,10 @@ server <- function(input, output, session) {
         
         ## Add Annotation column
         #if (is.null(input$UMAPmetaFile) == F) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           meta <- meta_react()
           metaColanno <- input$UMAPannotateSamps
-          tdata_fit_df <- merge(tdata_fit_df,meta[,c("SampleName",metaColanno)], by = "SampleName")
+          tdata_fit_df <- merge(tdata_fit_df,meta[,c(colnames(meta_react())[1],metaColanno)], by = colnames(meta_react())[1])
         }
         #}
         
@@ -2469,17 +2487,17 @@ server <- function(input, output, session) {
         expr <- expr_raw()
         if (!is.null(input$GeneSelection)) {
           expr_g_t <- FeatExpreAnnotation()
-          tdata_fit_df <- merge(tdata_fit_df,expr_g_t, by = "SampleName")
+          tdata_fit_df <- merge(tdata_fit_df,expr_g_t, by = colnames(meta_react())[1])
         }
         else if (is.null(input$GeneSelection)) {
           expr_g_t <- FeatExpreAnnotation()
-          tdata_fit_df <- merge(tdata_fit_df,expr_g_t, by = "SampleName")
+          tdata_fit_df <- merge(tdata_fit_df,expr_g_t, by = colnames(meta_react())[1])
         }
         
         ## Add Cluster Annotation Column
         cluter_tab <- umapClusterTable_react()
         metaColkmean <- "Cluster"
-        tdata_fit_df <- merge(tdata_fit_df,cluter_tab, by = "SampleName")
+        tdata_fit_df <- merge(tdata_fit_df,cluter_tab, by = colnames(meta_react())[1])
         #}
         
         tdata_fit_df
@@ -2521,7 +2539,7 @@ server <- function(input, output, session) {
         plot_df <- UMAP_MVG_CoordTable_react()
         rownames(plot_df) <- plot_df[,1]
         #if (is.null(input$UMAPmetaFile) == F) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           if (input$UMAPannoContCheck != T) {
             plot_df[,metaColanno] <- as.factor(plot_df[,metaColanno])
@@ -2546,7 +2564,7 @@ server <- function(input, output, session) {
           colnames(plot_df)[c(4,5)] <- c("AnnoName","GeneName")
           k <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2, colour=AnnoName,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColanno,":</b> ", AnnoName,
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
@@ -2556,7 +2574,7 @@ server <- function(input, output, session) {
           colnames(plot_df)[4] <- "GeneName"
           k <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
                                     sep = "")))
@@ -2568,13 +2586,13 @@ server <- function(input, output, session) {
           theme_minimal()
         
         #if (is.null(input$UMAPmetaFile) == F) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           k <- k + labs(x = "UMAP1",
                         y = "UMAP2",
                         color = metaColanno)
         }
-        if (input$UMAPannotateSamps == " ") {
+        if (input$UMAPannotateSamps == "") {
           k <- k + labs(x = "UMAP1",
                         y = "UMAP2")
         }
@@ -2585,7 +2603,7 @@ server <- function(input, output, session) {
         #}
         
         #if (is.null(input$UMAPmetaFile) == F) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           if (input$UMAPannoContCheck == T) {
             myPalette <- colorRampPalette(rev(brewer.pal(9, input$UMAPcolors)))
             k <- k + scale_colour_gradientn(colours = rev(myPalette(100)))
@@ -2632,7 +2650,7 @@ server <- function(input, output, session) {
         plot_df <- UMAP_MVG_CoordTable_react()
         rownames(plot_df) <- plot_df[,1]
         #if (is.null(input$UMAPmetaFile) == F) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           if (input$UMAPannoContCheck != T) {
             plot_df[,metaColanno] <- as.factor(plot_df[,metaColanno])
@@ -2658,7 +2676,7 @@ server <- function(input, output, session) {
           colnames(plot_df)[c(4,5)] <- c("AnnoName","GeneName")
           k <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2, colour=AnnoName,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColanno,":</b> ", AnnoName,
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
@@ -2668,7 +2686,7 @@ server <- function(input, output, session) {
           colnames(plot_df)[4] <- "GeneName"
           k <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
                                     sep = "")))
@@ -2680,13 +2698,13 @@ server <- function(input, output, session) {
           theme_minimal()
         
         #if (is.null(input$UMAPmetaFile) == F) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           k <- k + labs(x = "UMAP1",
                         y = "UMAP2",
                         color = metaColanno)
         }
-        if (input$UMAPannotateSamps == " ") {
+        if (input$UMAPannotateSamps == "") {
           k <- k + labs(x = "UMAP1",
                         y = "UMAP2")
         }
@@ -2697,7 +2715,7 @@ server <- function(input, output, session) {
         #}
         
         #if (is.null(input$UMAPmetaFile) == F) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           if (input$UMAPannoContCheck == T) {
             myPalette <- colorRampPalette(rev(brewer.pal(9, input$UMAPcolors)))
             k <- k + scale_colour_gradientn(colours = rev(myPalette(100)))
@@ -2746,7 +2764,7 @@ server <- function(input, output, session) {
         plot_df <- UMAP_MVG_CoordTable_react()
         rownames(plot_df) <- plot_df[,1]
         #if (is.null(input$UMAPmetaFile) == F) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           if (input$UMAPannoContCheck != T) {
             plot_df[,metaColanno] <- as.factor(plot_df[,metaColanno])
@@ -2782,13 +2800,13 @@ server <- function(input, output, session) {
         
         ## Make it plotly
         k2 <- ggplotly(k,
-                       tooltip = "text") %>% 
+                       tooltip = "text") %>%
           
-          config(displayModeBar = F)  %>% 
+          config(displayModeBar = F)  %>%
           
           layout(font=list(color="#black"),
                  xaxis=list(title="UMAP1",zeroline=F),
-                 yaxis=list(title="UMAP2",zeroline=F)) 
+                 yaxis=list(title="UMAP2",zeroline=F))
         
         k2 <- k2 %>%
           hide_legend() %>%
@@ -2821,7 +2839,7 @@ server <- function(input, output, session) {
         plot_df <- UMAP_MVG_CoordTable_react()
         rownames(plot_df) <- plot_df[,1]
         #if (is.null(input$UMAPmetaFile) == F) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           if (input$UMAPannoContCheck != T) {
             plot_df[,metaColanno] <- as.factor(plot_df[,metaColanno])
@@ -2870,7 +2888,7 @@ server <- function(input, output, session) {
           colnames(plot_df)[c(4,5)] <- c("AnnoName","GeneName")
           m <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2, colour=GeneName,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColanno,":</b> ", AnnoName,
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
@@ -2880,12 +2898,12 @@ server <- function(input, output, session) {
           colnames(plot_df)[4] <- "GeneName"
           m <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2, colour=GeneName,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
                                     sep = "")))
         }
-        m <- m + 
+        m <- m +
           geom_point(shape = 19,
                      size = UMAPdotSize) +
           
@@ -2935,7 +2953,7 @@ server <- function(input, output, session) {
         plot_df <- UMAP_MVG_CoordTable_react()
         rownames(plot_df) <- plot_df[,1]
         #if (is.null(input$UMAPmetaFile) == F) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           if (input$UMAPannoContCheck != T) {
             plot_df[,metaColanno] <- as.factor(plot_df[,metaColanno])
@@ -2984,7 +3002,7 @@ server <- function(input, output, session) {
           colnames(plot_df)[c(4,5)] <- c("AnnoName","GeneName")
           m <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2, colour=GeneName,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColanno,":</b> ", AnnoName,
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
@@ -2994,12 +3012,12 @@ server <- function(input, output, session) {
           colnames(plot_df)[4] <- "GeneName"
           m <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2, colour=GeneName,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
                                     sep = "")))
         }
-        m <- m + 
+        m <- m +
           geom_point(shape = 19,
                      size = UMAPdotSize) +
           
@@ -3054,7 +3072,7 @@ server <- function(input, output, session) {
         plot_df <- UMAP_MVG_CoordTable_react()
         rownames(plot_df) <- plot_df[,1]
         #if (is.null(input$UMAPmetaFile) == F) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           if (input$UMAPannoContCheck != T) {
             plot_df[,metaColanno] <- as.factor(plot_df[,metaColanno])
@@ -3113,13 +3131,13 @@ server <- function(input, output, session) {
         
         ## Make it plotly
         m2 <- ggplotly(m,
-                       tooltip = "text") %>% 
+                       tooltip = "text") %>%
           
-          config(displayModeBar = F)  %>% 
+          config(displayModeBar = F)  %>%
           
           layout(font=list(color="#black"),
                  xaxis=list(title="UMAP1",zeroline=F),
-                 yaxis=list(title="UMAP2",zeroline=F)) %>% 
+                 yaxis=list(title="UMAP2",zeroline=F)) %>%
           
           hide_legend() %>%
           hide_colorbar()
@@ -3152,7 +3170,7 @@ server <- function(input, output, session) {
         plot_df <- UMAP_MVG_CoordTable_react()
         rownames(plot_df) <- plot_df[,1]
         #if (is.null(input$UMAPmetaFile) == F) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           if (input$UMAPannoContCheck != T) {
             plot_df[,metaColanno] <- as.factor(plot_df[,metaColanno])
@@ -3178,7 +3196,7 @@ server <- function(input, output, session) {
           colnames(plot_df)[c(4,5)] <- c("AnnoName","GeneName")
           n <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2, colour=Cluster,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColanno,":</b> ", AnnoName,
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
@@ -3188,7 +3206,7 @@ server <- function(input, output, session) {
           colnames(plot_df)[4] <- "GeneName"
           n <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2, colour=Cluster,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
                                     sep = "")))
@@ -3240,7 +3258,7 @@ server <- function(input, output, session) {
         plot_df <- UMAP_MVG_CoordTable_react()
         rownames(plot_df) <- plot_df[,1]
         #if (is.null(input$UMAPmetaFile) == F) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           if (input$UMAPannoContCheck != T) {
             plot_df[,metaColanno] <- as.factor(plot_df[,metaColanno])
@@ -3266,7 +3284,7 @@ server <- function(input, output, session) {
           colnames(plot_df)[c(4,5)] <- c("AnnoName","GeneName")
           n <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2, colour=Cluster,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColanno,":</b> ", AnnoName,
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
@@ -3276,7 +3294,7 @@ server <- function(input, output, session) {
           colnames(plot_df)[4] <- "GeneName"
           n <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2, colour=Cluster,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
                                     sep = "")))
@@ -3332,7 +3350,7 @@ server <- function(input, output, session) {
         plot_df <- UMAP_MVG_CoordTable_react()
         rownames(plot_df) <- plot_df[,1]
         #if (is.null(input$UMAPmetaFile) == F) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           if (input$UMAPannoContCheck != T) {
             plot_df[,metaColanno] <- as.factor(plot_df[,metaColanno])
@@ -3368,13 +3386,13 @@ server <- function(input, output, session) {
         
         ## Make it plotly
         n2 <- ggplotly(n,
-                       tooltip = "text") %>% 
+                       tooltip = "text") %>%
           
-          config(displayModeBar = F)  %>% 
+          config(displayModeBar = F)  %>%
           
           layout(font=list(color="#black"),
                  xaxis=list(title="UMAP1",zeroline=F),
-                 yaxis=list(title="UMAP2",zeroline=F)) %>% 
+                 yaxis=list(title="UMAP2",zeroline=F)) %>%
           
           hide_legend() %>%
           hide_colorbar()
@@ -3400,13 +3418,13 @@ server <- function(input, output, session) {
         n <- umap_plot_MVG_react_kmean_base()
         
         #if (is.null(input$UMAPmetaFile) == F) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           legendk <- g_legend(k)
           legendm <- g_legend(m)
           legendn <- g_legend(n)
           legend_grid <- grid.arrange(legendk,legendm,legendn,nrow = 1)
         }
-        else if (input$UMAPannotateSamps == " ") {
+        else if (input$UMAPannotateSamps == "") {
           legendm <- g_legend(m)
           legendn <- g_legend(n)
           legend_grid <- grid.arrange(legendm,legendn,nrow = 1)
@@ -3429,10 +3447,10 @@ server <- function(input, output, session) {
         n2 <- umap_plot_MVG_react_kmean()
         
         #if (is.null(input$UMAPmetaFile) == F) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           UMAPtitlek <- paste("Annotated by",input$UMAPannotateSamps)
         }
-        else if (input$UMAPannotateSamps == " ") {
+        else if (input$UMAPannotateSamps == "") {
           UMAPtitlek <- ""
         }
         #}
@@ -3474,70 +3492,70 @@ server <- function(input, output, session) {
         
         if (input$UMAPorientation == "Side-by-Side") {
           subplot_all_sbs <- plotly::subplot(k2, m2, n2, nrows = 1, shareY = TRUE, shareX = TRUE)
-          plot_titles = list( 
-            list( 
+          plot_titles = list(
+            list(
               x = 0,
               y = 1,
-              text = UMAPtitlek,  
-              xref = "x",  
-              yref = "paper",  
-              xanchor = "center",  
-              yanchor = "bottom",  
-              showarrow = FALSE 
-            ),  
-            list( 
+              text = UMAPtitlek,
+              xref = "x",
+              yref = "paper",
+              xanchor = "center",
+              yanchor = "bottom",
+              showarrow = FALSE
+            ),
+            list(
               x = 0,
               y = 1,
-              text = UMAPtitlem,  
+              text = UMAPtitlem,
               xref = "x2",
               yref = "paper",
-              xanchor = "center",  
-              yanchor = "bottom",    
-              showarrow = FALSE 
-            ),  
-            list( 
+              xanchor = "center",
+              yanchor = "bottom",
+              showarrow = FALSE
+            ),
+            list(
               x = 0,
               y = 1,
-              text = UMAPtitlen,  
+              text = UMAPtitlen,
               xref = "x3",
               yref = "paper",
-              xanchor = "center",  
-              yanchor = "bottom",  
-              showarrow = FALSE 
+              xanchor = "center",
+              yanchor = "bottom",
+              showarrow = FALSE
             ))
         }
         else if (input$UMAPorientation == "Stacked") {
           subplot_all_sbs <- plotly::subplot(k2, m2, n2, nrows = 3, shareY = TRUE, shareX = TRUE, margin = 0.04)
-          plot_titles = list( 
-            list( 
+          plot_titles = list(
+            list(
               x = 0,
               y = 1,
-              text = UMAPtitlek,  
-              xref = "x",  
-              yref = "paper",  
-              xanchor = "center",  
-              yanchor = "bottom",  
-              showarrow = FALSE 
-            ),  
-            list( 
+              text = UMAPtitlek,
+              xref = "x",
+              yref = "paper",
+              xanchor = "center",
+              yanchor = "bottom",
+              showarrow = FALSE
+            ),
+            list(
               x = 0,
               y = 0.65,
-              text = UMAPtitlem,  
+              text = UMAPtitlem,
               xref = "x",
               yref = "paper",
-              xanchor = "center",  
-              yanchor = "bottom",    
-              showarrow = FALSE 
-            ),  
-            list( 
+              xanchor = "center",
+              yanchor = "bottom",
+              showarrow = FALSE
+            ),
+            list(
               x = 0,
               y = 0.3,
-              text = UMAPtitlen,  
+              text = UMAPtitlen,
               xref = "x",
               yref = "paper",
-              xanchor = "center",  
-              yanchor = "bottom",  
-              showarrow = FALSE 
+              xanchor = "center",
+              yanchor = "bottom",
+              showarrow = FALSE
             ))
         }
         
@@ -3569,13 +3587,13 @@ server <- function(input, output, session) {
         if (sampSubset == "Select All") {
           metaSub <- meta
           metaSub <- metaSub %>%
-            relocate(SampleName,all_of(sampGroupCriteria))
+            relocate(any_of(colnames(meta_react())[1]),all_of(sampGroupCriteria))
           metaSub
         }
         else if (sampSubset != "Select All") {
           metaSub <- meta[which(meta[,sampSubset] == sampGroupCriteria),]
           metaSub <- metaSub %>%
-            relocate(SampleName,sampGroupCriteria,sampSubset)
+            relocate(any_of(colnames(meta_react())[1]),sampGroupCriteria,sampSubset)
           metaSub
         }
         
@@ -3622,7 +3640,7 @@ server <- function(input, output, session) {
         
         FeatMat <- expr_raw()
         metaSub <- VI_meta_subset()
-        FeatMat <- FeatMat[,metaSub$SampleName]
+        FeatMat <- FeatMat[,metaSub[,colnames(meta_react())[1]]]
         #sampSubset <- input$BPsampSubset
         sampCriteria <- input$BPsampCriteria
         #groupCriteria <- input$BPgroupCriteria
@@ -3631,19 +3649,19 @@ server <- function(input, output, session) {
         } else {featSelected <- input$BPFeatSelection}
         #featSelected <- input$BPFeatSelection
         sampSelected <- input$UMAPsampSelect
-        metaSub2 <- metaSub[,c("SampleName",groupCriteria)]
+        metaSub2 <- metaSub[,c(colnames(meta_react())[1],groupCriteria)]
         metaSub2[,groupCriteria] <- as.factor(metaSub2[,groupCriteria])
-
+        
         if (length(featSelected) > 0){
           
           feature <- featSelected
           FeatMat <- as.data.frame(FeatMat)
           if (feature %in% rownames(FeatMat)) {
             feat_gene <- as.data.frame(t(FeatMat[feature,]))
-            feat_gene$SampleName <- rownames(feat_gene)
+            feat_gene[,colnames(meta_react())[1]] <- rownames(feat_gene)
           }
           if (!feature %in% rownames(FeatMat)) {
-            feat_gene <- as.data.frame(metaSub[,c("SampleName",feature)])
+            feat_gene <- as.data.frame(metaSub[,c(colnames(meta_react())[1],feature)])
           }
           feat_gene2 <- merge(feat_gene,metaSub2)
           #feat_gene2 <- merge(feat_gene,metaSub2,by = "SampleName", all = T)
@@ -3673,7 +3691,7 @@ server <- function(input, output, session) {
           
           
           
-          colnames(feat_gene2) <- c("SampleName","FeatureName","Type")
+          colnames(feat_gene2) <- c(colnames(meta_react())[1],"FeatureName","Type")
           
           #if (!is.numeric(feat_gene2$FeatureName)) {
           if (VilOrBP == "Stacked Barplot") {
@@ -3865,7 +3883,7 @@ server <- function(input, output, session) {
         #  if (!is.null(input$BPgroupCriteria)) {
         metaSub <- VI_meta_subset()
         FeatMat <- expr_raw()
-        FeatMat <- FeatMat[,metaSub$SampleName]
+        FeatMat <- FeatMat[,metaSub[,colnames(meta_react())[1]]]
         logchoice <- input$log2Vplot
         if (is.null(input$BPFeatSelection)) {
           featSelected <- rownames(FeatMat)[1]
@@ -3877,12 +3895,12 @@ server <- function(input, output, session) {
           FeatMat <- as.data.frame(FeatMat)
           if (feature %in% rownames(FeatMat)) {
             feat_gene <- as.data.frame(t(FeatMat[feature,]))
-            feat_gene$SampleName <- rownames(feat_gene)
+            feat_gene[,colnames(meta_react())[1]] <- rownames(feat_gene)
           }
           if (!feature %in% rownames(FeatMat)) {
-            feat_gene <- as.data.frame(metaSub[,c("SampleName",feature)])
+            feat_gene <- as.data.frame(metaSub[,c(colnames(meta_react())[1],feature)])
           }
-          feat_gene2 <- merge(feat_gene,metaSub,by = "SampleName", all = T)
+          feat_gene2 <- merge(feat_gene,metaSub,by = colnames(meta_react())[1], all = T)
           if (logchoice == T) {
             #feat_gene2[which(feat_gene2[,2] < 0),2] <- 0
             feat_gene2[,2] <- log2(feat_gene2[,2] + 1)
@@ -3945,7 +3963,7 @@ server <- function(input, output, session) {
           Feat1 <- "Cluster"
         } else {Feat1 <- input$EnrichFeat1}
         if (is.null(input$EnrichFeat2)) {
-          Feat2 <- colnames(meta)[1]
+          Feat2 <- colnames(meta_react())[1]
         } else {Feat2 <- input$EnrichFeat2}
         if (is.null(input$EnrichVar1)) {
           Var1 <- levels(as.factor(meta[,Feat1]))[1]
@@ -3972,7 +3990,7 @@ server <- function(input, output, session) {
           Feat1 <- "Cluster"
         } else {Feat1 <- input$EnrichFeat1}
         if (is.null(input$EnrichFeat2)) {
-          Feat2 <- colnames(meta)[1]
+          Feat2 <- colnames(meta_react())[1]
         } else {Feat2 <- input$EnrichFeat2}
         if (is.null(input$EnrichVar1)) {
           Var1 <- levels(as.factor(meta[,Feat1]))[1]
@@ -4009,7 +4027,7 @@ server <- function(input, output, session) {
           Feat1 <- "Cluster"
         } else {Feat1 <- input$EnrichFeat1}
         if (is.null(input$EnrichFeat2)) {
-          Feat2 <- colnames(meta)[1]
+          Feat2 <- colnames(meta_react())[1]
         } else {Feat2 <- input$EnrichFeat2}
         if (is.null(input$EnrichVar1)) {
           Var1 <- levels(as.factor(meta[,Feat1]))[1]
@@ -4033,7 +4051,7 @@ server <- function(input, output, session) {
           Feat1 <- "Cluster"
         } else {Feat1 <- input$EnrichFeat1}
         if (is.null(input$EnrichFeat2)) {
-          Feat2 <- colnames(meta)[1]
+          Feat2 <- colnames(meta_react())[1]
         } else {Feat2 <- input$EnrichFeat2}
         if (is.null(input$EnrichVar1)) {
           Var1 <- levels(as.factor(meta[,Feat1]))[1]
@@ -4052,21 +4070,60 @@ server <- function(input, output, session) {
         VennObj <- Venn(VennList)
         VennData <- process_data(VennObj)
         
-        ggplot() +
-          # 1. region count layer
-          geom_sf(aes(fill = count), data = venn_region(VennData), show.legend = F) +
-          # 2. set edge layer
-          geom_sf(aes(color = name), data = venn_setedge(VennData), show.legend = F, size = 1) +
-          # 3. set label layer
-          geom_sf_text(aes(label = name), data = venn_setlabel(VennData), size = 6) +
-          # 4. region label layer
-          geom_sf_label(aes(label = paste0(count)), 
-                        data = venn_region(VennData),
-                        size = 6,
-                        alpha = 0.5) +
-          scale_fill_gradient(low = "#F4FAFE", high = "#4981BF")+
-          scale_color_manual(values = c("#F4FAFE","#F4FAFE"))+
-          theme_void()
+        if (packageVersion("ggVennDiagram") < package_version("1.4")) {
+          ggplot() +
+            # 1. region count layer
+            geom_sf(aes(fill = count), data = venn_region(VennData), show.legend = F) +
+            # 2. set edge layer
+            geom_sf(aes(color = name), data = venn_setedge(VennData), show.legend = F, size = 1) +
+            # 3. set label layer
+            geom_sf_text(aes(label = name), data = venn_setlabel(VennData), size = 6) +
+            # 4. region label layer
+            geom_sf_label(aes(label = paste0(count)),
+                          data = venn_region(VennData),
+                          size = 6,
+                          alpha = 0.5) +
+            scale_fill_gradient(low = "#F4FAFE", high = "#4981BF")+
+            scale_color_manual(values = c("#F4FAFE","#F4FAFE"))+
+            theme_void()
+        } else {
+          ggplot() +
+            # 1. region count layer
+            geom_polygon(aes(X, Y, fill = count, group = id),
+                         data = venn_regionedge(VennData), show.legend = F) +
+            # 2. set edge layer
+            geom_path(aes(X, Y, color = id, group = id),
+                      data = venn_setedge(VennData),
+                      show.legend = FALSE, linewidth = 1) +
+            # 3. set label layer
+            geom_text(aes(X, Y, label = name),
+                      data = venn_setlabel(VennData), size = 4) +
+            # 4. region label layer
+            geom_label(aes(X, Y, label = count),
+                       data = venn_regionlabel(VennData),
+                       size = 6,
+                       alpha = 0.5) +
+            scale_fill_gradient(low = "#F4FAFE", high = "#4981BF")+
+            scale_color_manual(values = c("#F4FAFE","#F4FAFE"))+
+            coord_flip() +
+            theme_void()
+        }
+        
+        #ggplot() +
+        #  # 1. region count layer
+        #  geom_sf(aes(fill = count), data = venn_region(VennData), show.legend = F) +
+        #  # 2. set edge layer
+        #  geom_sf(aes(color = name), data = venn_setedge(VennData), show.legend = F, size = 1) +
+        #  # 3. set label layer
+        #  geom_sf_text(aes(label = name), data = venn_setlabel(VennData), size = 6) +
+        #  # 4. region label layer
+        #  geom_sf_label(aes(label = paste0(count)),
+        #                data = venn_region(VennData),
+        #                size = 6,
+        #                alpha = 0.5) +
+        #  scale_fill_gradient(low = "#F4FAFE", high = "#4981BF")+
+        #  scale_color_manual(values = c("#F4FAFE","#F4FAFE"))+
+        #  theme_void()
         
       })
       
@@ -4085,7 +4142,7 @@ server <- function(input, output, session) {
           Feat1 <- "Cluster"
         } else {Feat1 <- input$EnrichFeat1}
         if (is.null(input$EnrichFeat2)) {
-          Feat2 <- colnames(meta)[1]
+          Feat2 <- colnames(meta_react())[1]
         } else {Feat2 <- input$EnrichFeat2}
         if (is.null(input$EnrichVar1)) {
           Var1 <- levels(as.factor(meta[,Feat1]))[1]
@@ -4133,7 +4190,7 @@ server <- function(input, output, session) {
         plot_df <- UMAP_PATH_CoordTable_react()
         rownames(plot_df) <- plot_df[,1]
         #if (is.null(input$UMAPmetaFile) == F) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           if (input$UMAPannoContCheck != T) {
             plot_df[,metaColanno] <- as.factor(plot_df[,metaColanno])
@@ -4158,7 +4215,7 @@ server <- function(input, output, session) {
           colnames(plot_df)[c(4,5)] <- c("AnnoName","GeneName")
           k <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2, colour=AnnoName,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColanno,":</b> ", AnnoName,
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
@@ -4168,7 +4225,7 @@ server <- function(input, output, session) {
           colnames(plot_df)[4] <- "GeneName"
           k <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
                                     sep = "")))
@@ -4180,13 +4237,13 @@ server <- function(input, output, session) {
           theme_minimal()
         
         #if (is.null(input$UMAPmetaFile) == F) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           k <- k + labs(x = "UMAP1",
                         y = "UMAP2",
                         color = metaColanno)
         }
-        if (input$UMAPannotateSamps == " ") {
+        if (input$UMAPannotateSamps == "") {
           k <- k + labs(x = "UMAP1",
                         y = "UMAP2")
         }
@@ -4197,7 +4254,7 @@ server <- function(input, output, session) {
         #}
         
         #if (is.null(input$UMAPmetaFile) == F) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           if (input$UMAPannoContCheck == T) {
             myPalette <- colorRampPalette(rev(brewer.pal(9, input$UMAPcolors)))
             k <- k + scale_colour_gradientn(colours = rev(myPalette(100)))
@@ -4244,7 +4301,7 @@ server <- function(input, output, session) {
         plot_df <- UMAP_PATH_CoordTable_react()
         rownames(plot_df) <- plot_df[,1]
         #if (is.null(input$UMAPmetaFile) == F) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           if (input$UMAPannoContCheck != T) {
             plot_df[,metaColanno] <- as.factor(plot_df[,metaColanno])
@@ -4269,7 +4326,7 @@ server <- function(input, output, session) {
           colnames(plot_df)[c(4,5)] <- c("AnnoName","GeneName")
           k <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2, colour=AnnoName,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColanno,":</b> ", AnnoName,
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
@@ -4279,7 +4336,7 @@ server <- function(input, output, session) {
           colnames(plot_df)[4] <- "GeneName"
           k <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
                                     sep = "")))
@@ -4291,13 +4348,13 @@ server <- function(input, output, session) {
           theme_minimal()
         
         #if (is.null(input$UMAPmetaFile) == F) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           k <- k + labs(x = "UMAP1",
                         y = "UMAP2",
                         color = metaColanno)
         }
-        if (input$UMAPannotateSamps == " ") {
+        if (input$UMAPannotateSamps == "") {
           k <- k + labs(x = "UMAP1",
                         y = "UMAP2")
         }
@@ -4308,7 +4365,7 @@ server <- function(input, output, session) {
         #}
         
         if (is.null(input$UMAPmetaFile) == F) {
-          if (input$UMAPannotateSamps != " ") {
+          if (input$UMAPannotateSamps != "") {
             if (input$UMAPannoContCheck == T) {
               myPalette <- colorRampPalette(rev(brewer.pal(9, input$UMAPcolors)))
               k <- k + scale_colour_gradientn(colours = rev(myPalette(100)))
@@ -4358,7 +4415,7 @@ server <- function(input, output, session) {
         plot_df <- UMAP_PATH_CoordTable_react()
         rownames(plot_df) <- plot_df[,1]
         #if (is.null(input$UMAPmetaFile) == F) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           if (input$UMAPannoContCheck != T) {
             plot_df[,metaColanno] <- as.factor(plot_df[,metaColanno])
@@ -4393,13 +4450,13 @@ server <- function(input, output, session) {
         
         ## Make it plotly
         k2 <- ggplotly(k,
-                       tooltip = "text") %>% 
+                       tooltip = "text") %>%
           
-          config(displayModeBar = F)  %>% 
+          config(displayModeBar = F)  %>%
           
           layout(font=list(color="#black"),
                  xaxis=list(title="UMAP1",zeroline=F),
-                 yaxis=list(title="UMAP2",zeroline=F)) 
+                 yaxis=list(title="UMAP2",zeroline=F))
         
         k2 <- k2 %>%
           hide_legend() %>%
@@ -4432,7 +4489,7 @@ server <- function(input, output, session) {
         plot_df <- UMAP_PATH_CoordTable_react()
         rownames(plot_df) <- plot_df[,1]
         #if (is.null(input$UMAPmetaFile) == F) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           if (input$UMAPannoContCheck != T) {
             plot_df[,metaColanno] <- as.factor(plot_df[,metaColanno])
@@ -4481,7 +4538,7 @@ server <- function(input, output, session) {
           colnames(plot_df)[c(4,5)] <- c("AnnoName","GeneName")
           m <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2, colour=GeneName,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColanno,":</b> ", AnnoName,
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
@@ -4491,12 +4548,12 @@ server <- function(input, output, session) {
           colnames(plot_df)[4] <- "GeneName"
           m <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2, colour=GeneName,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
                                     sep = "")))
         }
-        m <- m + 
+        m <- m +
           geom_point(shape = 19,
                      size = UMAPdotSize) +
           
@@ -4546,7 +4603,7 @@ server <- function(input, output, session) {
         plot_df <- UMAP_PATH_CoordTable_react()
         rownames(plot_df) <- plot_df[,1]
         #if (is.null(input$UMAPmetaFile) == F) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           if (input$UMAPannoContCheck != T) {
             plot_df[,metaColanno] <- as.factor(plot_df[,metaColanno])
@@ -4594,7 +4651,7 @@ server <- function(input, output, session) {
           colnames(plot_df)[c(4,5)] <- c("AnnoName","GeneName")
           m <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2, colour=GeneName,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColanno,":</b> ", AnnoName,
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
@@ -4604,12 +4661,12 @@ server <- function(input, output, session) {
           colnames(plot_df)[4] <- "GeneName"
           m <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2, colour=GeneName,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
                                     sep = "")))
         }
-        m <- m + 
+        m <- m +
           geom_point(shape = 19,
                      size = UMAPdotSize) +
           
@@ -4664,7 +4721,7 @@ server <- function(input, output, session) {
         plot_df <- UMAP_PATH_CoordTable_react()
         rownames(plot_df) <- plot_df[,1]
         #if (is.null(input$UMAPmetaFile) == F) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           if (input$UMAPannoContCheck != T) {
             plot_df[,metaColanno] <- as.factor(plot_df[,metaColanno])
@@ -4722,13 +4779,13 @@ server <- function(input, output, session) {
         
         ## Make it plotly
         m2 <- ggplotly(m,
-                       tooltip = "text") %>% 
+                       tooltip = "text") %>%
           
-          config(displayModeBar = F)  %>% 
+          config(displayModeBar = F)  %>%
           
           layout(font=list(color="#black"),
                  xaxis=list(title="UMAP1",zeroline=F),
-                 yaxis=list(title="UMAP2",zeroline=F)) %>% 
+                 yaxis=list(title="UMAP2",zeroline=F)) %>%
           
           hide_legend() %>%
           hide_colorbar()
@@ -4761,7 +4818,7 @@ server <- function(input, output, session) {
         plot_df <- UMAP_PATH_CoordTable_react()
         rownames(plot_df) <- plot_df[,1]
         #if (is.null(input$UMAPmetaFile) == F) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           if (input$UMAPannoContCheck != T) {
             plot_df[,metaColanno] <- as.factor(plot_df[,metaColanno])
@@ -4786,7 +4843,7 @@ server <- function(input, output, session) {
           colnames(plot_df)[c(4,5)] <- c("AnnoName","GeneName")
           n <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2, colour=Cluster,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColanno,":</b> ", AnnoName,
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
@@ -4796,7 +4853,7 @@ server <- function(input, output, session) {
           colnames(plot_df)[4] <- "GeneName"
           n <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2, colour=Cluster,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
                                     sep = "")))
@@ -4848,7 +4905,7 @@ server <- function(input, output, session) {
         plot_df <- UMAP_PATH_CoordTable_react()
         rownames(plot_df) <- plot_df[,1]
         #if (is.null(input$UMAPmetaFile) == F) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           if (input$UMAPannoContCheck != T) {
             plot_df[,metaColanno] <- as.factor(plot_df[,metaColanno])
@@ -4873,7 +4930,7 @@ server <- function(input, output, session) {
           colnames(plot_df)[c(4,5)] <- c("AnnoName","GeneName")
           n <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2, colour=Cluster,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColanno,":</b> ", AnnoName,
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
@@ -4883,7 +4940,7 @@ server <- function(input, output, session) {
           colnames(plot_df)[4] <- "GeneName"
           n <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2, colour=Cluster,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
                                     sep = "")))
@@ -4939,7 +4996,7 @@ server <- function(input, output, session) {
         plot_df <- UMAP_PATH_CoordTable_react()
         rownames(plot_df) <- plot_df[,1]
         #if (is.null(input$UMAPmetaFile) == F) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           if (input$UMAPannoContCheck != T) {
             plot_df[,metaColanno] <- as.factor(plot_df[,metaColanno])
@@ -4974,13 +5031,13 @@ server <- function(input, output, session) {
         
         ## Make it plotly
         n2 <- ggplotly(n,
-                       tooltip = "text") %>% 
+                       tooltip = "text") %>%
           
-          config(displayModeBar = F)  %>% 
+          config(displayModeBar = F)  %>%
           
           layout(font=list(color="#black"),
                  xaxis=list(title="UMAP1",zeroline=F),
-                 yaxis=list(title="UMAP2",zeroline=F)) %>% 
+                 yaxis=list(title="UMAP2",zeroline=F)) %>%
           
           hide_legend() %>%
           hide_colorbar()
@@ -5006,13 +5063,13 @@ server <- function(input, output, session) {
         n <- umap_plot_PATH_react_kmean_base()
         
         #if (is.null(input$UMAPmetaFile) == F) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           legendk <- g_legend(k)
           legendm <- g_legend(m)
           legendn <- g_legend(n)
           legend_grid <- grid.arrange(legendk,legendm,legendn,nrow = 1)
         }
-        else if (input$UMAPannotateSamps == " ") {
+        else if (input$UMAPannotateSamps == "") {
           legendm <- g_legend(m)
           legendn <- g_legend(n)
           legend_grid <- grid.arrange(legendm,legendn,nrow = 1)
@@ -5035,10 +5092,10 @@ server <- function(input, output, session) {
         n2 <- umap_plot_PATH_react_kmean()
         
         #if (is.null(input$UMAPmetaFile) == F) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           UMAPtitlek <- paste("Annotated by",input$UMAPannotateSamps)
         }
-        else if (input$UMAPannotateSamps == " ") {
+        else if (input$UMAPannotateSamps == "") {
           UMAPtitlek <- ""
         }
         #}
@@ -5071,70 +5128,70 @@ server <- function(input, output, session) {
         
         if (input$UMAPorientation == "Side-by-Side") {
           subplot_all_sbs <- plotly::subplot(k2, m2, n2, nrows = 1, shareY = TRUE, shareX = TRUE)
-          plot_titles = list( 
-            list( 
+          plot_titles = list(
+            list(
               x = 0,
               y = 1,
-              text = UMAPtitlek,  
-              xref = "x",  
-              yref = "paper",  
-              xanchor = "center",  
-              yanchor = "bottom",  
-              showarrow = FALSE 
-            ),  
-            list( 
+              text = UMAPtitlek,
+              xref = "x",
+              yref = "paper",
+              xanchor = "center",
+              yanchor = "bottom",
+              showarrow = FALSE
+            ),
+            list(
               x = 0,
               y = 1,
-              text = UMAPtitlem,  
+              text = UMAPtitlem,
               xref = "x2",
               yref = "paper",
-              xanchor = "center",  
-              yanchor = "bottom",    
-              showarrow = FALSE 
-            ),  
-            list( 
+              xanchor = "center",
+              yanchor = "bottom",
+              showarrow = FALSE
+            ),
+            list(
               x = 0,
               y = 1,
-              text = UMAPtitlen,  
+              text = UMAPtitlen,
               xref = "x3",
               yref = "paper",
-              xanchor = "center",  
-              yanchor = "bottom",  
-              showarrow = FALSE 
+              xanchor = "center",
+              yanchor = "bottom",
+              showarrow = FALSE
             ))
         }
         else if (input$UMAPorientation == "Stacked") {
           subplot_all_sbs <- plotly::subplot(k2, m2, n2, nrows = 3, shareY = TRUE, shareX = TRUE, margin = 0.04)
-          plot_titles = list( 
-            list( 
+          plot_titles = list(
+            list(
               x = 0,
               y = 1,
-              text = UMAPtitlek,  
-              xref = "x",  
-              yref = "paper",  
-              xanchor = "center",  
-              yanchor = "bottom",  
-              showarrow = FALSE 
-            ),  
-            list( 
+              text = UMAPtitlek,
+              xref = "x",
+              yref = "paper",
+              xanchor = "center",
+              yanchor = "bottom",
+              showarrow = FALSE
+            ),
+            list(
               x = 0,
               y = 0.65,
-              text = UMAPtitlem,  
+              text = UMAPtitlem,
               xref = "x",
               yref = "paper",
-              xanchor = "center",  
-              yanchor = "bottom",    
-              showarrow = FALSE 
-            ),  
-            list( 
+              xanchor = "center",
+              yanchor = "bottom",
+              showarrow = FALSE
+            ),
+            list(
               x = 0,
               y = 0.3,
-              text = UMAPtitlen,  
+              text = UMAPtitlen,
               xref = "x",
               yref = "paper",
-              xanchor = "center",  
-              yanchor = "bottom",  
-              showarrow = FALSE 
+              xanchor = "center",
+              yanchor = "bottom",
+              showarrow = FALSE
             ))
         }
         
@@ -5166,13 +5223,13 @@ server <- function(input, output, session) {
         if (sampSubset == "Select All") {
           metaSub <- meta
           metaSub <- metaSub %>%
-            relocate(SampleName,all_of(sampGroupCriteria))
+            relocate(any_of(colnames(meta_react())[1]),all_of(sampGroupCriteria))
           metaSub
         }
         else if (sampSubset != "Select All") {
           metaSub <- meta[which(meta[,sampSubset] == sampGroupCriteria),]
           metaSub <- metaSub %>%
-            relocate(SampleName,sampGroupCriteria,sampSubset)
+            relocate(any_of(colnames(meta_react())[1]),sampGroupCriteria,sampSubset)
           metaSub
         }
         
@@ -5221,7 +5278,7 @@ server <- function(input, output, session) {
         
         FeatMat <- expr_raw()
         metaSub <- VI_meta_subset_PATH()
-        FeatMat <- FeatMat[,metaSub$SampleName]
+        FeatMat <- FeatMat[,metaSub[,colnames(meta_react())[1]]]
         #sampSubset <- input$BPsampSubset
         sampCriteria <- input$BPsampCriteria
         #groupCriteria <- input$BPgroupCriteria
@@ -5230,7 +5287,7 @@ server <- function(input, output, session) {
         } else {featSelected <- input$BPFeatSelection}
         #featSelected <- input$BPFeatSelection
         sampSelected <- input$UMAPsampSelect
-        metaSub2 <- metaSub[,c("SampleName",groupCriteria)]
+        metaSub2 <- metaSub[,c(colnames(meta_react())[1],groupCriteria)]
         metaSub2[,groupCriteria] <- as.factor(metaSub2[,groupCriteria])
         
         if (length(featSelected) > 0){
@@ -5239,12 +5296,12 @@ server <- function(input, output, session) {
           FeatMat <- as.data.frame(FeatMat)
           if (feature %in% rownames(FeatMat)) {
             feat_gene <- as.data.frame(t(FeatMat[feature,]))
-            feat_gene$SampleName <- rownames(feat_gene)
+            feat_gene[,colnames(meta_react())[1]] <- rownames(feat_gene)
           }
           if (!feature %in% rownames(FeatMat)) {
-            feat_gene <- as.data.frame(metaSub[,c("SampleName",feature)])
+            feat_gene <- as.data.frame(metaSub[,c(colnames(meta_react())[1],feature)])
           }
-          feat_gene2 <- merge(feat_gene,metaSub2,by = "SampleName", all = T)
+          feat_gene2 <- merge(feat_gene,metaSub2,by = colnames(meta_react())[1], all = T)
           feature_lab <- feature
           feattitle <- feature_lab
           if (logchoice == T) {
@@ -5275,7 +5332,7 @@ server <- function(input, output, session) {
             feat_gene2[,2] <- log2(feat_gene2[,2] + 1)
           }
           
-          colnames(feat_gene2) <- c("SampleName","FeatureName","Type")
+          colnames(feat_gene2) <- c(colnames(meta_react())[1],"FeatureName","Type")
           
           #if (!is.numeric(feat_gene2$FeatureName)) {
           if (VilOrBP == "Stacked Barplot") {
@@ -5559,7 +5616,7 @@ server <- function(input, output, session) {
         #  if (!is.null(input$BPgroupCriteria)) {
         metaSub <- VI_meta_subset_PATH()
         FeatMat <- expr_raw()
-        FeatMat <- FeatMat[,metaSub$SampleName]
+        FeatMat <- FeatMat[,metaSub[,colnames(meta_react())[1]]]
         logchoice <- input$log2Vplot
         if (is.null(input$BPFeatSelection)) {
           featSelected <- rownames(FeatMat)[1]
@@ -5571,12 +5628,12 @@ server <- function(input, output, session) {
           FeatMat <- as.data.frame(FeatMat)
           if (feature %in% rownames(FeatMat)) {
             feat_gene <- as.data.frame(t(FeatMat[feature,]))
-            feat_gene$SampleName <- rownames(feat_gene)
+            feat_gene[,colnames(meta_react())[1]] <- rownames(feat_gene)
           }
           if (!feature %in% rownames(FeatMat)) {
-            feat_gene <- as.data.frame(metaSub[,c("SampleName",feature)])
+            feat_gene <- as.data.frame(metaSub[,c(colnames(meta_react())[1],feature)])
           }
-          feat_gene2 <- merge(feat_gene,metaSub,by = "SampleName", all = T)
+          feat_gene2 <- merge(feat_gene,metaSub,by = colnames(meta_react())[1], all = T)
           if (logchoice == T) {
             #feat_gene2[which(feat_gene2[,2] < 0),2] <- 0
             feat_gene2[,2] <- log2(feat_gene2[,2] + 1)
@@ -5613,7 +5670,7 @@ server <- function(input, output, session) {
           Feat1 <- "Cluster"
         } else {Feat1 <- input$EnrichFeat1}
         if (is.null(input$EnrichFeat2)) {
-          Feat2 <- colnames(meta)[1]
+          Feat2 <- colnames(meta_react())[1]
         } else {Feat2 <- input$EnrichFeat2}
         if (is.null(input$EnrichVar1)) {
           Var1 <- levels(as.factor(meta[,Feat1]))[1]
@@ -5640,7 +5697,7 @@ server <- function(input, output, session) {
           Feat1 <- "Cluster"
         } else {Feat1 <- input$EnrichFeat1}
         if (is.null(input$EnrichFeat2)) {
-          Feat2 <- colnames(meta)[1]
+          Feat2 <- colnames(meta_react())[1]
         } else {Feat2 <- input$EnrichFeat2}
         if (is.null(input$EnrichVar1)) {
           Var1 <- levels(as.factor(meta[,Feat1]))[1]
@@ -5677,7 +5734,7 @@ server <- function(input, output, session) {
           Feat1 <- "Cluster"
         } else {Feat1 <- input$EnrichFeat1}
         if (is.null(input$EnrichFeat2)) {
-          Feat2 <- colnames(meta)[1]
+          Feat2 <- colnames(meta_react())[1]
         } else {Feat2 <- input$EnrichFeat2}
         if (is.null(input$EnrichVar1)) {
           Var1 <- levels(as.factor(meta[,Feat1]))[1]
@@ -5701,7 +5758,7 @@ server <- function(input, output, session) {
           Feat1 <- "Cluster"
         } else {Feat1 <- input$EnrichFeat1}
         if (is.null(input$EnrichFeat2)) {
-          Feat2 <- colnames(meta)[1]
+          Feat2 <- colnames(meta_react())[1]
         } else {Feat2 <- input$EnrichFeat2}
         if (is.null(input$EnrichVar1)) {
           Var1 <- levels(as.factor(meta[,Feat1]))[1]
@@ -5720,21 +5777,60 @@ server <- function(input, output, session) {
         VennObj <- Venn(VennList)
         VennData <- process_data(VennObj)
         
-        ggplot() +
-          # 1. region count layer
-          geom_sf(aes(fill = count), data = venn_region(VennData), show.legend = F) +
-          # 2. set edge layer
-          geom_sf(aes(color = name), data = venn_setedge(VennData), show.legend = F, size = 1) +
-          # 3. set label layer
-          geom_sf_text(aes(label = name), data = venn_setlabel(VennData), size = 6) +
-          # 4. region label layer
-          geom_sf_label(aes(label = paste0(count)), 
-                        data = venn_region(VennData),
-                        size = 6,
-                        alpha = 0.5) +
-          scale_fill_gradient(low = "#F4FAFE", high = "#4981BF")+
-          scale_color_manual(values = c("#F4FAFE","#F4FAFE"))+
-          theme_void()
+        if (packageVersion("ggVennDiagram") < package_version("1.4")) {
+          ggplot() +
+            # 1. region count layer
+            geom_sf(aes(fill = count), data = venn_region(VennData), show.legend = F) +
+            # 2. set edge layer
+            geom_sf(aes(color = name), data = venn_setedge(VennData), show.legend = F, size = 1) +
+            # 3. set label layer
+            geom_sf_text(aes(label = name), data = venn_setlabel(VennData), size = 6) +
+            # 4. region label layer
+            geom_sf_label(aes(label = paste0(count)),
+                          data = venn_region(VennData),
+                          size = 6,
+                          alpha = 0.5) +
+            scale_fill_gradient(low = "#F4FAFE", high = "#4981BF")+
+            scale_color_manual(values = c("#F4FAFE","#F4FAFE"))+
+            theme_void()
+        } else {
+          ggplot() +
+            # 1. region count layer
+            geom_polygon(aes(X, Y, fill = count, group = id),
+                         data = venn_regionedge(VennData), show.legend = F) +
+            # 2. set edge layer
+            geom_path(aes(X, Y, color = id, group = id),
+                      data = venn_setedge(VennData),
+                      show.legend = FALSE, linewidth = 1) +
+            # 3. set label layer
+            geom_text(aes(X, Y, label = name),
+                      data = venn_setlabel(VennData), size = 4) +
+            # 4. region label layer
+            geom_label(aes(X, Y, label = count),
+                       data = venn_regionlabel(VennData),
+                       size = 6,
+                       alpha = 0.5) +
+            scale_fill_gradient(low = "#F4FAFE", high = "#4981BF")+
+            scale_color_manual(values = c("#F4FAFE","#F4FAFE"))+
+            coord_flip() +
+            theme_void()
+        }
+        
+        #ggplot() +
+        #  # 1. region count layer
+        #  geom_sf(aes(fill = count), data = venn_region(VennData), show.legend = F) +
+        #  # 2. set edge layer
+        #  geom_sf(aes(color = name), data = venn_setedge(VennData), show.legend = F, size = 1) +
+        #  # 3. set label layer
+        #  geom_sf_text(aes(label = name), data = venn_setlabel(VennData), size = 6) +
+        #  # 4. region label layer
+        #  geom_sf_label(aes(label = paste0(count)),
+        #                data = venn_region(VennData),
+        #                size = 6,
+        #                alpha = 0.5) +
+        #  scale_fill_gradient(low = "#F4FAFE", high = "#4981BF")+
+        #  scale_color_manual(values = c("#F4FAFE","#F4FAFE"))+
+        #  theme_void()
         
       })
       
@@ -5753,7 +5849,7 @@ server <- function(input, output, session) {
           Feat1 <- "Cluster"
         } else {Feat1 <- input$EnrichFeat1}
         if (is.null(input$EnrichFeat2)) {
-          Feat2 <- colnames(meta)[1]
+          Feat2 <- colnames(meta_react())[1]
         } else {Feat2 <- input$EnrichFeat2}
         if (is.null(input$EnrichVar1)) {
           Var1 <- levels(as.factor(meta[,Feat1]))[1]
@@ -5799,7 +5895,7 @@ server <- function(input, output, session) {
         plot_df <- UMAP_CoordTable_react()
         rownames(plot_df) <- plot_df[,1]
         #if (is.null(input$UMAPmetaFile) == F) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           if (input$UMAPannoContCheck != T) {
             plot_df[,metaColanno] <- as.factor(plot_df[,metaColanno])
@@ -5824,7 +5920,7 @@ server <- function(input, output, session) {
           colnames(plot_df)[c(4,5)] <- c("AnnoName","GeneName")
           k <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2, colour=AnnoName,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColanno,":</b> ", AnnoName,
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
@@ -5834,7 +5930,7 @@ server <- function(input, output, session) {
           colnames(plot_df)[4] <- "GeneName"
           k <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
                                     sep = "")))
@@ -5846,13 +5942,13 @@ server <- function(input, output, session) {
           theme_minimal()
         
         #if (is.null(input$UMAPmetaFile) == F) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           k <- k + labs(x = "UMAP1",
                         y = "UMAP2",
                         color = metaColanno)
         }
-        if (input$UMAPannotateSamps == " ") {
+        if (input$UMAPannotateSamps == "") {
           k <- k + labs(x = "UMAP1",
                         y = "UMAP2")
         }
@@ -5863,7 +5959,7 @@ server <- function(input, output, session) {
         #}
         
         #if (is.null(input$UMAPmetaFile) == F) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           if (input$UMAPannoContCheck == T) {
             myPalette <- colorRampPalette(rev(brewer.pal(9, input$UMAPcolors)))
             k <- k + scale_colour_gradientn(colours = rev(myPalette(100)))
@@ -5910,7 +6006,7 @@ server <- function(input, output, session) {
         plot_df <- UMAP_CoordTable_react()
         rownames(plot_df) <- plot_df[,1]
         #if (is.null(input$UMAPmetaFile) == F) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           if (input$UMAPannoContCheck != T) {
             plot_df[,metaColanno] <- as.factor(plot_df[,metaColanno])
@@ -5935,7 +6031,7 @@ server <- function(input, output, session) {
           colnames(plot_df)[c(4,5)] <- c("AnnoName","GeneName")
           k <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2, colour=AnnoName,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColanno,":</b> ", AnnoName,
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
@@ -5945,7 +6041,7 @@ server <- function(input, output, session) {
           colnames(plot_df)[4] <- "GeneName"
           k <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
                                     sep = "")))
@@ -5957,13 +6053,13 @@ server <- function(input, output, session) {
           theme_minimal()
         
         #if (is.null(input$UMAPmetaFile) == F) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           k <- k + labs(x = "UMAP1",
                         y = "UMAP2",
                         color = metaColanno)
         }
-        if (input$UMAPannotateSamps == " ") {
+        if (input$UMAPannotateSamps == "") {
           k <- k + labs(x = "UMAP1",
                         y = "UMAP2")
         }
@@ -5974,7 +6070,7 @@ server <- function(input, output, session) {
         #}
         
         if (is.null(input$UMAPmetaFile) == F) {
-          if (input$UMAPannotateSamps != " ") {
+          if (input$UMAPannotateSamps != "") {
             if (input$UMAPannoContCheck == T) {
               myPalette <- colorRampPalette(rev(brewer.pal(9, input$UMAPcolors)))
               k <- k + scale_colour_gradientn(colours = rev(myPalette(100)))
@@ -6023,7 +6119,7 @@ server <- function(input, output, session) {
         plot_df <- UMAP_CoordTable_react()
         rownames(plot_df) <- plot_df[,1]
         #if (is.null(input$UMAPmetaFile) == F) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           if (input$UMAPannoContCheck != T) {
             plot_df[,metaColanno] <- as.factor(plot_df[,metaColanno])
@@ -6058,13 +6154,13 @@ server <- function(input, output, session) {
         
         ## Make it plotly
         k2 <- ggplotly(k,
-                       tooltip = "text") %>% 
+                       tooltip = "text") %>%
           
-          config(displayModeBar = F)  %>% 
+          config(displayModeBar = F)  %>%
           
           layout(font=list(color="#black"),
                  xaxis=list(title="UMAP1",zeroline=F),
-                 yaxis=list(title="UMAP2",zeroline=F)) 
+                 yaxis=list(title="UMAP2",zeroline=F))
         
         k2 <- k2 %>%
           hide_legend() %>%
@@ -6097,7 +6193,7 @@ server <- function(input, output, session) {
         plot_df <- UMAP_CoordTable_react()
         rownames(plot_df) <- plot_df[,1]
         #if (is.null(input$UMAPmetaFile) == F) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           if (input$UMAPannoContCheck != T) {
             plot_df[,metaColanno] <- as.factor(plot_df[,metaColanno])
@@ -6145,7 +6241,7 @@ server <- function(input, output, session) {
           colnames(plot_df)[c(4,5)] <- c("AnnoName","GeneName")
           m <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2, colour=GeneName,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColanno,":</b> ", AnnoName,
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
@@ -6155,12 +6251,12 @@ server <- function(input, output, session) {
           colnames(plot_df)[4] <- "GeneName"
           m <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2, colour=GeneName,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
                                     sep = "")))
         }
-        m <- m + 
+        m <- m +
           geom_point(shape = 19,
                      size = UMAPdotSize) +
           
@@ -6210,7 +6306,7 @@ server <- function(input, output, session) {
         plot_df <- UMAP_CoordTable_react()
         rownames(plot_df) <- plot_df[,1]
         #if (is.null(input$UMAPmetaFile) == F) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           if (input$UMAPannoContCheck != T) {
             plot_df[,metaColanno] <- as.factor(plot_df[,metaColanno])
@@ -6258,7 +6354,7 @@ server <- function(input, output, session) {
           colnames(plot_df)[c(4,5)] <- c("AnnoName","GeneName")
           m <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2, colour=GeneName,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColanno,":</b> ", AnnoName,
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
@@ -6268,12 +6364,12 @@ server <- function(input, output, session) {
           colnames(plot_df)[4] <- "GeneName"
           m <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2, colour=GeneName,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
                                     sep = "")))
         }
-        m <- m + 
+        m <- m +
           geom_point(shape = 19,
                      size = UMAPdotSize) +
           
@@ -6328,7 +6424,7 @@ server <- function(input, output, session) {
         plot_df <- UMAP_CoordTable_react()
         rownames(plot_df) <- plot_df[,1]
         #if (is.null(input$UMAPmetaFile) == F) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           if (input$UMAPannoContCheck != T) {
             plot_df[,metaColanno] <- as.factor(plot_df[,metaColanno])
@@ -6386,13 +6482,13 @@ server <- function(input, output, session) {
         
         ## Make it plotly
         m2 <- ggplotly(m,
-                       tooltip = "text") %>% 
+                       tooltip = "text") %>%
           
-          config(displayModeBar = F)  %>% 
+          config(displayModeBar = F)  %>%
           
           layout(font=list(color="#black"),
                  xaxis=list(title="UMAP1",zeroline=F),
-                 yaxis=list(title="UMAP2",zeroline=F)) %>% 
+                 yaxis=list(title="UMAP2",zeroline=F)) %>%
           
           hide_legend() %>%
           hide_colorbar()
@@ -6425,7 +6521,7 @@ server <- function(input, output, session) {
         plot_df <- UMAP_CoordTable_react()
         rownames(plot_df) <- plot_df[,1]
         #if (is.null(input$UMAPmetaFile) == F) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           if (input$UMAPannoContCheck != T) {
             plot_df[,metaColanno] <- as.factor(plot_df[,metaColanno])
@@ -6450,7 +6546,7 @@ server <- function(input, output, session) {
           colnames(plot_df)[c(4,5)] <- c("AnnoName","GeneName")
           n <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2, colour=Cluster,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColanno,":</b> ", AnnoName,
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
@@ -6460,7 +6556,7 @@ server <- function(input, output, session) {
           colnames(plot_df)[4] <- "GeneName"
           n <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2, colour=Cluster,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
                                     sep = "")))
@@ -6512,7 +6608,7 @@ server <- function(input, output, session) {
         plot_df <- UMAP_CoordTable_react()
         rownames(plot_df) <- plot_df[,1]
         #if (is.null(input$UMAPmetaFile) == F) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           if (input$UMAPannoContCheck != T) {
             plot_df[,metaColanno] <- as.factor(plot_df[,metaColanno])
@@ -6537,7 +6633,7 @@ server <- function(input, output, session) {
           colnames(plot_df)[c(4,5)] <- c("AnnoName","GeneName")
           n <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2, colour=Cluster,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColanno,":</b> ", AnnoName,
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
@@ -6547,7 +6643,7 @@ server <- function(input, output, session) {
           colnames(plot_df)[4] <- "GeneName"
           n <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2, colour=Cluster,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
                                     sep = "")))
@@ -6603,7 +6699,7 @@ server <- function(input, output, session) {
         plot_df <- UMAP_CoordTable_react()
         rownames(plot_df) <- plot_df[,1]
         #if (is.null(input$UMAPmetaFile) == F) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           if (input$UMAPannoContCheck != T) {
             plot_df[,metaColanno] <- as.factor(plot_df[,metaColanno])
@@ -6638,13 +6734,13 @@ server <- function(input, output, session) {
         
         ## Make it plotly
         n2 <- ggplotly(n,
-                       tooltip = "text") %>% 
+                       tooltip = "text") %>%
           
-          config(displayModeBar = F)  %>% 
+          config(displayModeBar = F)  %>%
           
           layout(font=list(color="#black"),
                  xaxis=list(title="UMAP1",zeroline=F),
-                 yaxis=list(title="UMAP2",zeroline=F)) %>% 
+                 yaxis=list(title="UMAP2",zeroline=F)) %>%
           
           hide_legend() %>%
           hide_colorbar()
@@ -6670,13 +6766,13 @@ server <- function(input, output, session) {
         n <- umap_plot_kmean_react_base()
         
         #if (is.null(input$UMAPmetaFile) == F) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           legendk <- g_legend(k)
           legendm <- g_legend(m)
           legendn <- g_legend(n)
           legend_grid <- grid.arrange(legendk,legendm,legendn,nrow = 1)
         }
-        else if (input$UMAPannotateSamps == " ") {
+        else if (input$UMAPannotateSamps == "") {
           legendm <- g_legend(m)
           legendn <- g_legend(n)
           legend_grid <- grid.arrange(legendm,legendn,nrow = 1)
@@ -6699,10 +6795,10 @@ server <- function(input, output, session) {
         n2 <- umap_plot_kmean_react()
         
         #if (is.null(input$UMAPmetaFile) == F) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           UMAPtitlek <- paste("Annotated by",input$UMAPannotateSamps)
         }
-        else if (input$UMAPannotateSamps == " ") {
+        else if (input$UMAPannotateSamps == "") {
           UMAPtitlek <- ""
         }
         #}
@@ -6736,70 +6832,70 @@ server <- function(input, output, session) {
         
         if (input$UMAPorientation == "Side-by-Side") {
           subplot_all_sbs <- plotly::subplot(k2, m2, n2, nrows = 1, shareY = TRUE, shareX = TRUE)
-          plot_titles = list( 
-            list( 
+          plot_titles = list(
+            list(
               x = 0,
               y = 1,
-              text = UMAPtitlek,  
-              xref = "x",  
-              yref = "paper",  
-              xanchor = "center",  
-              yanchor = "bottom",  
-              showarrow = FALSE 
-            ),  
-            list( 
+              text = UMAPtitlek,
+              xref = "x",
+              yref = "paper",
+              xanchor = "center",
+              yanchor = "bottom",
+              showarrow = FALSE
+            ),
+            list(
               x = 0,
               y = 1,
-              text = UMAPtitlem,  
+              text = UMAPtitlem,
               xref = "x2",
               yref = "paper",
-              xanchor = "center",  
-              yanchor = "bottom",    
-              showarrow = FALSE 
-            ),  
-            list( 
+              xanchor = "center",
+              yanchor = "bottom",
+              showarrow = FALSE
+            ),
+            list(
               x = 0,
               y = 1,
-              text = UMAPtitlen,  
+              text = UMAPtitlen,
               xref = "x3",
               yref = "paper",
-              xanchor = "center",  
-              yanchor = "bottom",  
-              showarrow = FALSE 
+              xanchor = "center",
+              yanchor = "bottom",
+              showarrow = FALSE
             ))
         }
         else if (input$UMAPorientation == "Stacked") {
           subplot_all_sbs <- plotly::subplot(k2, m2, n2, nrows = 3, shareY = TRUE, shareX = TRUE, margin = 0.04)
-          plot_titles = list( 
-            list( 
+          plot_titles = list(
+            list(
               x = 0,
               y = 1,
-              text = UMAPtitlek,  
-              xref = "x",  
-              yref = "paper",  
-              xanchor = "center",  
-              yanchor = "bottom",  
-              showarrow = FALSE 
-            ),  
-            list( 
+              text = UMAPtitlek,
+              xref = "x",
+              yref = "paper",
+              xanchor = "center",
+              yanchor = "bottom",
+              showarrow = FALSE
+            ),
+            list(
               x = 0,
               y = 0.65,
-              text = UMAPtitlem,  
+              text = UMAPtitlem,
               xref = "x",
               yref = "paper",
-              xanchor = "center",  
-              yanchor = "bottom",    
-              showarrow = FALSE 
-            ),  
-            list( 
+              xanchor = "center",
+              yanchor = "bottom",
+              showarrow = FALSE
+            ),
+            list(
               x = 0,
               y = 0.3,
-              text = UMAPtitlen,  
+              text = UMAPtitlen,
               xref = "x",
               yref = "paper",
-              xanchor = "center",  
-              yanchor = "bottom",  
-              showarrow = FALSE 
+              xanchor = "center",
+              yanchor = "bottom",
+              showarrow = FALSE
             ))
         }
         
@@ -6831,13 +6927,13 @@ server <- function(input, output, session) {
         if (sampSubset == "Select All") {
           metaSub <- meta
           metaSub <- metaSub %>%
-            relocate(SampleName,all_of(sampGroupCriteria))
+            relocate(any_of(colnames(meta_react())[1]),all_of(sampGroupCriteria))
           metaSub
         }
         else if (sampSubset != "Select All") {
           metaSub <- meta[which(meta[,sampSubset] == sampGroupCriteria),]
           metaSub <- metaSub %>%
-            relocate(SampleName,sampGroupCriteria,sampSubset)
+            relocate(any_of(colnames(meta_react())[1]),sampGroupCriteria,sampSubset)
           metaSub
         }
         
@@ -6884,7 +6980,7 @@ server <- function(input, output, session) {
         
         FeatMat <- expr_raw()
         metaSub <- VI_meta_subset_BASE()
-        FeatMat <- FeatMat[,metaSub$SampleName]
+        FeatMat <- FeatMat[,metaSub[,colnames(meta_react())[1]]]
         #sampSubset <- input$BPsampSubset
         sampCriteria <- input$BPsampCriteria
         #groupCriteria <- input$BPgroupCriteria
@@ -6893,7 +6989,7 @@ server <- function(input, output, session) {
         } else {featSelected <- input$BPFeatSelection}
         #featSelected <- input$BPFeatSelection
         sampSelected <- input$UMAPsampSelect
-        metaSub2 <- metaSub[,c("SampleName",groupCriteria)]
+        metaSub2 <- metaSub[,c(colnames(meta_react())[1],groupCriteria)]
         metaSub2[,groupCriteria] <- as.factor(metaSub2[,groupCriteria])
         
         if (length(featSelected) > 0){
@@ -6902,12 +6998,12 @@ server <- function(input, output, session) {
           FeatMat <- as.data.frame(FeatMat)
           if (feature %in% rownames(FeatMat)) {
             feat_gene <- as.data.frame(t(FeatMat[feature,]))
-            feat_gene$SampleName <- rownames(feat_gene)
+            feat_gene[,colnames(meta_react())[1]] <- rownames(feat_gene)
           }
           if (!feature %in% rownames(FeatMat)) {
-            feat_gene <- as.data.frame(metaSub[,c("SampleName",feature)])
+            feat_gene <- as.data.frame(metaSub[,c(colnames(meta_react())[1],feature)])
           }
-          feat_gene2 <- merge(feat_gene,metaSub2,by = "SampleName", all = T)
+          feat_gene2 <- merge(feat_gene,metaSub2,by = colnames(meta_react())[1], all = T)
           feature_lab <- feature
           feattitle <- feature_lab
           if (logchoice == T) {
@@ -6938,7 +7034,7 @@ server <- function(input, output, session) {
             feat_gene2[,2] <- log2(feat_gene2[,2] + 1)
           }
           
-          colnames(feat_gene2) <- c("SampleName","FeatureName","Type")
+          colnames(feat_gene2) <- c(colnames(meta_react())[1],"FeatureName","Type")
           
           #if (!is.numeric(feat_gene2$FeatureName)) {
           if (VilOrBP == "Stacked Barplot") {
@@ -7129,7 +7225,7 @@ server <- function(input, output, session) {
         #  if (!is.null(input$BPgroupCriteria)) {
         metaSub <- VI_meta_subset_BASE()
         FeatMat <- expr_raw()
-        FeatMat <- FeatMat[,metaSub$SampleName]
+        FeatMat <- FeatMat[,metaSub[,colnames(meta_react())[1]]]
         logchoice <- input$log2Vplot
         if (is.null(input$BPFeatSelection)) {
           featSelected <- rownames(FeatMat)[1]
@@ -7141,12 +7237,12 @@ server <- function(input, output, session) {
           FeatMat <- as.data.frame(FeatMat)
           if (feature %in% rownames(FeatMat)) {
             feat_gene <- as.data.frame(t(FeatMat[feature,]))
-            feat_gene$SampleName <- rownames(feat_gene)
+            feat_gene[,colnames(meta_react())[1]] <- rownames(feat_gene)
           }
           if (!feature %in% rownames(FeatMat)) {
-            feat_gene <- as.data.frame(metaSub[,c("SampleName",feature)])
+            feat_gene <- as.data.frame(metaSub[,c(colnames(meta_react())[1],feature)])
           }
-          feat_gene2 <- merge(feat_gene,metaSub,by = "SampleName", all = T)
+          feat_gene2 <- merge(feat_gene,metaSub,by = colnames(meta_react())[1], all = T)
           if (logchoice == T) {
             #feat_gene2[which(feat_gene2[,2] < 0),2] <- 0
             feat_gene2[,2] <- log2(feat_gene2[,2] + 1)
@@ -7183,7 +7279,7 @@ server <- function(input, output, session) {
           Feat1 <- "Cluster"
         } else {Feat1 <- input$EnrichFeat1}
         if (is.null(input$EnrichFeat2)) {
-          Feat2 <- colnames(meta)[1]
+          Feat2 <- colnames(meta_react())[1]
         } else {Feat2 <- input$EnrichFeat2}
         if (is.null(input$EnrichVar1)) {
           Var1 <- levels(as.factor(meta[,Feat1]))[1]
@@ -7210,7 +7306,7 @@ server <- function(input, output, session) {
           Feat1 <- "Cluster"
         } else {Feat1 <- input$EnrichFeat1}
         if (is.null(input$EnrichFeat2)) {
-          Feat2 <- colnames(meta)[1]
+          Feat2 <- colnames(meta_react())[1]
         } else {Feat2 <- input$EnrichFeat2}
         if (is.null(input$EnrichVar1)) {
           Var1 <- levels(as.factor(meta[,Feat1]))[1]
@@ -7247,7 +7343,7 @@ server <- function(input, output, session) {
           Feat1 <- "Cluster"
         } else {Feat1 <- input$EnrichFeat1}
         if (is.null(input$EnrichFeat2)) {
-          Feat2 <- colnames(meta)[1]
+          Feat2 <- colnames(meta_react())[1]
         } else {Feat2 <- input$EnrichFeat2}
         if (is.null(input$EnrichVar1)) {
           Var1 <- levels(as.factor(meta[,Feat1]))[1]
@@ -7271,7 +7367,7 @@ server <- function(input, output, session) {
           Feat1 <- "Cluster"
         } else {Feat1 <- input$EnrichFeat1}
         if (is.null(input$EnrichFeat2)) {
-          Feat2 <- colnames(meta)[1]
+          Feat2 <- colnames(meta_react())[1]
         } else {Feat2 <- input$EnrichFeat2}
         if (is.null(input$EnrichVar1)) {
           Var1 <- levels(as.factor(meta[,Feat1]))[1]
@@ -7290,21 +7386,60 @@ server <- function(input, output, session) {
         VennObj <- Venn(VennList)
         VennData <- process_data(VennObj)
         
-        ggplot() +
-          # 1. region count layer
-          geom_sf(aes(fill = count), data = venn_region(VennData), show.legend = F) +
-          # 2. set edge layer
-          geom_sf(aes(color = name), data = venn_setedge(VennData), show.legend = F, size = 1) +
-          # 3. set label layer
-          geom_sf_text(aes(label = name), data = venn_setlabel(VennData), size = 6) +
-          # 4. region label layer
-          geom_sf_label(aes(label = paste0(count)), 
-                        data = venn_region(VennData),
-                        size = 6,
-                        alpha = 0.5) +
-          scale_fill_gradient(low = "#F4FAFE", high = "#4981BF")+
-          scale_color_manual(values = c("#F4FAFE","#F4FAFE"))+
-          theme_void()
+        if (packageVersion("ggVennDiagram") < package_version("1.4")) {
+          ggplot() +
+            # 1. region count layer
+            geom_sf(aes(fill = count), data = venn_region(VennData), show.legend = F) +
+            # 2. set edge layer
+            geom_sf(aes(color = name), data = venn_setedge(VennData), show.legend = F, size = 1) +
+            # 3. set label layer
+            geom_sf_text(aes(label = name), data = venn_setlabel(VennData), size = 6) +
+            # 4. region label layer
+            geom_sf_label(aes(label = paste0(count)),
+                          data = venn_region(VennData),
+                          size = 6,
+                          alpha = 0.5) +
+            scale_fill_gradient(low = "#F4FAFE", high = "#4981BF")+
+            scale_color_manual(values = c("#F4FAFE","#F4FAFE"))+
+            theme_void()
+        } else {
+          ggplot() +
+            # 1. region count layer
+            geom_polygon(aes(X, Y, fill = count, group = id),
+                         data = venn_regionedge(VennData), show.legend = F) +
+            # 2. set edge layer
+            geom_path(aes(X, Y, color = id, group = id),
+                      data = venn_setedge(VennData),
+                      show.legend = FALSE, linewidth = 1) +
+            # 3. set label layer
+            geom_text(aes(X, Y, label = name),
+                      data = venn_setlabel(VennData), size = 4) +
+            # 4. region label layer
+            geom_label(aes(X, Y, label = count),
+                       data = venn_regionlabel(VennData),
+                       size = 6,
+                       alpha = 0.5) +
+            scale_fill_gradient(low = "#F4FAFE", high = "#4981BF")+
+            scale_color_manual(values = c("#F4FAFE","#F4FAFE"))+
+            coord_flip() +
+            theme_void()
+        }
+        
+        #ggplot() +
+        #  # 1. region count layer
+        #  geom_sf(aes(fill = count), data = venn_region(VennData), show.legend = F) +
+        #  # 2. set edge layer
+        #  geom_sf(aes(color = name), data = venn_setedge(VennData), show.legend = F, size = 1) +
+        #  # 3. set label layer
+        #  geom_sf_text(aes(label = name), data = venn_setlabel(VennData), size = 6) +
+        #  # 4. region label layer
+        #  geom_sf_label(aes(label = paste0(count)),
+        #                data = venn_region(VennData),
+        #                size = 6,
+        #                alpha = 0.5) +
+        #  scale_fill_gradient(low = "#F4FAFE", high = "#4981BF")+
+        #  scale_color_manual(values = c("#F4FAFE","#F4FAFE"))+
+        #  theme_void()
         
       })
       
@@ -7323,7 +7458,7 @@ server <- function(input, output, session) {
           Feat1 <- "Cluster"
         } else {Feat1 <- input$EnrichFeat1}
         if (is.null(input$EnrichFeat2)) {
-          Feat2 <- colnames(meta)[1]
+          Feat2 <- colnames(meta_react())[1]
         } else {Feat2 <- input$EnrichFeat2}
         if (is.null(input$EnrichVar1)) {
           Var1 <- levels(as.factor(meta[,Feat1]))[1]
@@ -7372,7 +7507,7 @@ server <- function(input, output, session) {
         
         plot_df <- UMAP_PreC_CoordTable_react()
         rownames(plot_df) <- plot_df[,1]
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           if (input$UMAPannoContCheck != T) {
             plot_df[,metaColanno] <- as.factor(plot_df[,metaColanno])
@@ -7397,23 +7532,23 @@ server <- function(input, output, session) {
         
         ## Meta Annotation Plot
         #if (!is.null(input$UMAPmatrixFile)) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           colnames(plot_df)[c(4,5)] <- c("AnnoName","GeneName")
           #print(head(as_tibble(plot_df)))
           k <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2, colour=AnnoName,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColanno,":</b> ", AnnoName,
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
                                     sep = "")))
         }
-        else if (input$UMAPannotateSamps == " ") {
+        else if (input$UMAPannotateSamps == "") {
           colnames(plot_df)[4] <- "GeneName"
           #print(head(as_tibble(plot_df)))
           k <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
                                     sep = "")))
@@ -7421,22 +7556,22 @@ server <- function(input, output, session) {
         
         #}
         #else if (is.null(input$UMAPmatrixFile)) {
-        #  if (input$UMAPannotateSamps != " ") {
+        #  if (input$UMAPannotateSamps != "") {
         #    colnames(plot_df)[4] <- c("AnnoName")
         #    #print(head(as_tibble(plot_df)))
         #    k <- plot_df %>%
         #      ggplot(aes(UMAP1, UMAP2, colour=AnnoName,
-        #                 text = paste("</br> <b>Sample Name:</b> ", SampleName,
+        #                 text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
         #                              "</br> <b>",metaColanno,":</b> ", AnnoName,
         #                              sep = "")))
         #  }
-        #  else if (input$UMAPannotateSamps == " ") {
+        #  else if (input$UMAPannotateSamps == "") {
         #    k <- plot_df %>%
         #      ggplot(aes(UMAP1, UMAP2,
-        #                 text = paste("</br> <b>Sample Name:</b> ", SampleName,
+        #                 text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
         #                              sep = "")))
         #  }
-        #  
+        #
         #}
         
         k <- k + geom_point(shape = 19,
@@ -7444,18 +7579,18 @@ server <- function(input, output, session) {
           
           theme_minimal()
         
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           k <- k + labs(x = umap1,
                         y = umap2,
                         color = metaColanno)
         }
-        if (input$UMAPannotateSamps == " ") {
+        if (input$UMAPannotateSamps == "") {
           k <- k + labs(x = umap1,
                         y = umap2,)
         }
         
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           if (input$UMAPannoContCheck == T) {
             myPalette <- colorRampPalette(rev(brewer.pal(9, input$UMAPcolors)))
             k <- k + scale_colour_gradientn(colours = rev(myPalette(100)))
@@ -7497,7 +7632,7 @@ server <- function(input, output, session) {
         
         plot_df <- UMAP_PreC_CoordTable_react()
         rownames(plot_df) <- plot_df[,1]
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           if (input$UMAPannoContCheck != T) {
             plot_df[,metaColanno] <- as.factor(plot_df[,metaColanno])
@@ -7522,23 +7657,23 @@ server <- function(input, output, session) {
         
         ## Meta Annotation Plot
         #if (!is.null(input$UMAPmatrixFile)) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           colnames(plot_df)[c(4,5)] <- c("AnnoName","GeneName")
           #print(head(as_tibble(plot_df)))
           k <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2, colour=AnnoName,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColanno,":</b> ", AnnoName,
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
                                     sep = "")))
         }
-        else if (input$UMAPannotateSamps == " ") {
+        else if (input$UMAPannotateSamps == "") {
           colnames(plot_df)[4] <- "GeneName"
           #print(head(as_tibble(plot_df)))
           k <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
                                     sep = "")))
@@ -7546,22 +7681,22 @@ server <- function(input, output, session) {
         
         #}
         #else if (is.null(input$UMAPmatrixFile)) {
-        #  if (input$UMAPannotateSamps != " ") {
+        #  if (input$UMAPannotateSamps != "") {
         #    colnames(plot_df)[4] <- c("AnnoName")
         #    #print(head(as_tibble(plot_df)))
         #    k <- plot_df %>%
         #      ggplot(aes(UMAP1, UMAP2, colour=AnnoName,
-        #                 text = paste("</br> <b>Sample Name:</b> ", SampleName,
+        #                 text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
         #                              "</br> <b>",metaColanno,":</b> ", AnnoName,
         #                              sep = "")))
         #  }
-        #  else if (input$UMAPannotateSamps == " ") {
+        #  else if (input$UMAPannotateSamps == "") {
         #    k <- plot_df %>%
         #      ggplot(aes(UMAP1, UMAP2,
-        #                 text = paste("</br> <b>Sample Name:</b> ", SampleName,
+        #                 text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
         #                              sep = "")))
         #  }
-        #  
+        #
         #}
         
         k <- k + geom_point(shape = 19,
@@ -7569,18 +7704,18 @@ server <- function(input, output, session) {
           
           theme_minimal()
         
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           k <- k + labs(x = umap1,
                         y = umap2,
                         color = metaColanno)
         }
-        if (input$UMAPannotateSamps == " ") {
+        if (input$UMAPannotateSamps == "") {
           k <- k + labs(x = umap1,
                         y = umap2,)
         }
         
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           if (input$UMAPannoContCheck == T) {
             myPalette <- colorRampPalette(rev(brewer.pal(9, input$UMAPcolors)))
             k <- k + scale_colour_gradientn(colours = rev(myPalette(100)))
@@ -7626,7 +7761,7 @@ server <- function(input, output, session) {
         umap1 <- input$SelectPreCalc1
         umap2 <- input$SelectPreCalc2
         
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           if (input$UMAPannoContCheck != T) {
             plot_df[,metaColanno] <- as.factor(plot_df[,metaColanno])
@@ -7665,13 +7800,13 @@ server <- function(input, output, session) {
         
         ## Make it plotly
         k2 <- ggplotly(k,
-                       tooltip = "text") %>% 
+                       tooltip = "text") %>%
           
-          config(displayModeBar = F)  %>% 
+          config(displayModeBar = F)  %>%
           
           layout(font=list(color="#black"),
                  xaxis=list(title=umap1,zeroline=F),
-                 yaxis=list(title=umap2,zeroline=F)) 
+                 yaxis=list(title=umap2,zeroline=F))
         
         k2 <- k2 %>%
           hide_legend() %>%
@@ -7709,7 +7844,7 @@ server <- function(input, output, session) {
         
         plot_df <- UMAP_PreC_CoordTable_react()
         rownames(plot_df) <- plot_df[,1]
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           if (input$UMAPannoContCheck != T) {
             plot_df[,metaColanno] <- as.factor(plot_df[,metaColanno])
@@ -7754,23 +7889,23 @@ server <- function(input, output, session) {
         
         ## Expr Annotation Plot
         #if (!is.null(input$UMAPmatrixFile)) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           colnames(plot_df)[c(4,5)] <- c("AnnoName","GeneName")
           #print(head(as_tibble(plot_df)))
           k <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2, colour=GeneName,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColanno,":</b> ", AnnoName,
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
                                     sep = "")))
         }
-        else if (input$UMAPannotateSamps == " ") {
+        else if (input$UMAPannotateSamps == "") {
           colnames(plot_df)[4] <- "GeneName"
           #print(head(as_tibble(plot_df)))
           k <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2, colour=GeneName,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
                                     sep = "")))
@@ -7784,13 +7919,13 @@ server <- function(input, output, session) {
           
           theme_minimal()
         
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           k <- k + labs(x = umap1,
                         y = umap2,
                         color = metaColgene)
         }
-        if (input$UMAPannotateSamps == " ") {
+        if (input$UMAPannotateSamps == "") {
           k <- k + labs(x = umap1,
                         y = umap2,)
         }
@@ -7834,7 +7969,7 @@ server <- function(input, output, session) {
         
         plot_df <- UMAP_PreC_CoordTable_react()
         rownames(plot_df) <- plot_df[,1]
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           if (input$UMAPannoContCheck != T) {
             plot_df[,metaColanno] <- as.factor(plot_df[,metaColanno])
@@ -7879,23 +8014,23 @@ server <- function(input, output, session) {
         
         ## Expr Annotation Plot
         #if (!is.null(input$UMAPmatrixFile)) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           colnames(plot_df)[c(4,5)] <- c("AnnoName","GeneName")
           #print(head(as_tibble(plot_df)))
           k <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2, colour=GeneName,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColanno,":</b> ", AnnoName,
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
                                     sep = "")))
         }
-        else if (input$UMAPannotateSamps == " ") {
+        else if (input$UMAPannotateSamps == "") {
           colnames(plot_df)[4] <- "GeneName"
           #print(head(as_tibble(plot_df)))
           k <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2, colour=GeneName,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
                                     sep = "")))
@@ -7909,13 +8044,13 @@ server <- function(input, output, session) {
           
           theme_minimal()
         
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           k <- k + labs(x = umap1,
                         y = umap2,
                         color = metaColgene)
         }
-        if (input$UMAPannotateSamps == " ") {
+        if (input$UMAPannotateSamps == "") {
           k <- k + labs(x = umap1,
                         y = umap2,)
         }
@@ -7962,7 +8097,7 @@ server <- function(input, output, session) {
         umap1 <- input$SelectPreCalc1
         umap2 <- input$SelectPreCalc2
         
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           if (input$UMAPannoContCheck != T) {
             plot_df[,metaColanno] <- as.factor(plot_df[,metaColanno])
@@ -8000,13 +8135,13 @@ server <- function(input, output, session) {
         
         ## Make it plotly
         k2 <- ggplotly(k,
-                       tooltip = "text") %>% 
+                       tooltip = "text") %>%
           
-          config(displayModeBar = F)  %>% 
+          config(displayModeBar = F)  %>%
           
           layout(font=list(color="#black"),
                  xaxis=list(title=umap1,zeroline=F),
-                 yaxis=list(title=umap2,zeroline=F)) 
+                 yaxis=list(title=umap2,zeroline=F))
         
         k2 <- k2 %>%
           hide_legend() %>%
@@ -8044,7 +8179,7 @@ server <- function(input, output, session) {
         
         plot_df <- UMAP_PreC_CoordTable_react()
         rownames(plot_df) <- plot_df[,1]
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           if (input$UMAPannoContCheck != T) {
             plot_df[,metaColanno] <- as.factor(plot_df[,metaColanno])
@@ -8088,23 +8223,23 @@ server <- function(input, output, session) {
         
         ## Cluster Annotation Plot
         #if (!is.null(input$UMAPmatrixFile)) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           colnames(plot_df)[c(4,5)] <- c("AnnoName","GeneName")
           #print(head(as_tibble(plot_df)))
           k <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2, colour=Cluster,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColanno,":</b> ", AnnoName,
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
                                     sep = "")))
         }
-        else if (input$UMAPannotateSamps == " ") {
+        else if (input$UMAPannotateSamps == "") {
           colnames(plot_df)[4] <- "GeneName"
           #print(head(as_tibble(plot_df)))
           k <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2, colour=Cluster,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
                                     sep = "")))
@@ -8118,13 +8253,13 @@ server <- function(input, output, session) {
           
           theme_minimal()
         
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           k <- k + labs(x = umap1,
                         y = umap2,
                         color = "Cluster")
         }
-        if (input$UMAPannotateSamps == " ") {
+        if (input$UMAPannotateSamps == "") {
           k <- k + labs(x = umap1,
                         y = umap2,)
         }
@@ -8167,7 +8302,7 @@ server <- function(input, output, session) {
         
         plot_df <- UMAP_PreC_CoordTable_react()
         rownames(plot_df) <- plot_df[,1]
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           if (input$UMAPannoContCheck != T) {
             plot_df[,metaColanno] <- as.factor(plot_df[,metaColanno])
@@ -8211,23 +8346,23 @@ server <- function(input, output, session) {
         
         ## Cluster Annotation Plot
         #if (!is.null(input$UMAPmatrixFile)) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           colnames(plot_df)[c(4,5)] <- c("AnnoName","GeneName")
           #print(head(as_tibble(plot_df)))
           k <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2, colour=Cluster,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColanno,":</b> ", AnnoName,
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
                                     sep = "")))
         }
-        else if (input$UMAPannotateSamps == " ") {
+        else if (input$UMAPannotateSamps == "") {
           colnames(plot_df)[4] <- "GeneName"
           #print(head(as_tibble(plot_df)))
           k <- plot_df %>%
             ggplot(aes(UMAP1, UMAP2, colour=Cluster,
-                       text = paste("</br> <b>Sample Name:</b> ", SampleName,
+                       text = paste("</br> <b>Sample Name:</b> ", colnames(meta_react())[1],
                                     "</br> <b>",metaColgene," Gene Expression:</b> ", round(GeneName,4),
                                     "</br> <b>Cluster:</b> ", Cluster,
                                     sep = "")))
@@ -8241,13 +8376,13 @@ server <- function(input, output, session) {
           
           theme_minimal()
         
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           k <- k + labs(x = umap1,
                         y = umap2,
                         color = "Cluster")
         }
-        if (input$UMAPannotateSamps == " ") {
+        if (input$UMAPannotateSamps == "") {
           k <- k + labs(x = umap1,
                         y = umap2,)
         }
@@ -8293,7 +8428,7 @@ server <- function(input, output, session) {
         umap1 <- input$SelectPreCalc1
         umap2 <- input$SelectPreCalc2
         
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           metaColanno <- input$UMAPannotateSamps
           if (input$UMAPannoContCheck != T) {
             plot_df[,metaColanno] <- as.factor(plot_df[,metaColanno])
@@ -8330,13 +8465,13 @@ server <- function(input, output, session) {
         
         ## Make it plotly
         k2 <- ggplotly(k,
-                       tooltip = "text") %>% 
+                       tooltip = "text") %>%
           
-          config(displayModeBar = F)  %>% 
+          config(displayModeBar = F)  %>%
           
           layout(font=list(color="#black"),
                  xaxis=list(title=umap1,zeroline=F),
-                 yaxis=list(title=umap2,zeroline=F)) 
+                 yaxis=list(title=umap2,zeroline=F))
         
         k2 <- k2 %>%
           hide_legend()
@@ -8360,19 +8495,19 @@ server <- function(input, output, session) {
         #req(input$UMAPmetaFile)
         #if (is.null(input$UMAPmatrixFile)) {
         #  if (!is.null(input$UMAPannotateSamps)) {
-        #    if (input$UMAPannotateSamps != " ") {
+        #    if (input$UMAPannotateSamps != "") {
         #      k <- umap_plot_PreC_clin_react_base()
         #      legendk <- g_legend(k)
         #      legend_grid <- legendk
         #    }
-        #    else if (input$UMAPannotateSamps == " ") {
+        #    else if (input$UMAPannotateSamps == "") {
         #      legend_grid <- NULL
         #    }
         #  }
         #  legend_grid
         #}
         #else if (!is.null(input$UMAPmatrixFile)) {
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           k <- umap_plot_PreC_clin_react_base()
           m <- umap_plot_PreC_expr_react_base()
           n <- umap_plot_PreC_kmean_react_base()
@@ -8381,7 +8516,7 @@ server <- function(input, output, session) {
           legendn <- g_legend(n)
           legend_grid <- grid.arrange(legendk,legendm,legendn,nrow = 1)
         }
-        else if (input$UMAPannotateSamps == " ") {
+        else if (input$UMAPannotateSamps == "") {
           m <- umap_plot_PreC_expr_react_base()
           n <- umap_plot_PreC_kmean_react_base()
           legendm <- g_legend(m)
@@ -8404,10 +8539,10 @@ server <- function(input, output, session) {
         m2 <- umap_plot_PreC_expr_react()
         n2 <- umap_plot_PreC_kmean_react()
         
-        if (input$UMAPannotateSamps != " ") {
+        if (input$UMAPannotateSamps != "") {
           UMAPtitlek <- paste("Annotated by",input$UMAPannotateSamps)
         }
-        else if (input$UMAPannotateSamps == " ") {
+        else if (input$UMAPannotateSamps == "") {
           UMAPtitlek <- ""
         }
         
@@ -8442,70 +8577,70 @@ server <- function(input, output, session) {
         
         if (input$UMAPorientation == "Side-by-Side") {
           subplot_all_sbs <- plotly::subplot(k2, m2, n2, nrows = 1, shareY = TRUE, shareX = TRUE)
-          plot_titles = list( 
-            list( 
+          plot_titles = list(
+            list(
               x = 0,
               y = 1,
-              text = UMAPtitlek,  
-              xref = "x",  
-              yref = "paper",  
-              xanchor = "center",  
-              yanchor = "bottom",  
-              showarrow = FALSE 
-            ),  
-            list( 
+              text = UMAPtitlek,
+              xref = "x",
+              yref = "paper",
+              xanchor = "center",
+              yanchor = "bottom",
+              showarrow = FALSE
+            ),
+            list(
               x = 0,
               y = 1,
-              text = UMAPtitlem,  
+              text = UMAPtitlem,
               xref = "x2",
               yref = "paper",
-              xanchor = "center",  
-              yanchor = "bottom",    
-              showarrow = FALSE 
-            ),  
-            list( 
+              xanchor = "center",
+              yanchor = "bottom",
+              showarrow = FALSE
+            ),
+            list(
               x = 0,
               y = 1,
-              text = UMAPtitlen,  
+              text = UMAPtitlen,
               xref = "x3",
               yref = "paper",
-              xanchor = "center",  
-              yanchor = "bottom",  
-              showarrow = FALSE 
+              xanchor = "center",
+              yanchor = "bottom",
+              showarrow = FALSE
             ))
         }
         else if (input$UMAPorientation == "Stacked") {
           subplot_all_sbs <- plotly::subplot(k2, m2, n2, nrows = 3, shareY = TRUE, shareX = TRUE, margin = 0.04)
-          plot_titles = list( 
-            list( 
+          plot_titles = list(
+            list(
               x = 0,
               y = 1,
-              text = UMAPtitlek,  
-              xref = "x",  
-              yref = "paper",  
-              xanchor = "center",  
-              yanchor = "bottom",  
-              showarrow = FALSE 
-            ),  
-            list( 
+              text = UMAPtitlek,
+              xref = "x",
+              yref = "paper",
+              xanchor = "center",
+              yanchor = "bottom",
+              showarrow = FALSE
+            ),
+            list(
               x = 0,
               y = 0.65,
-              text = UMAPtitlem,  
+              text = UMAPtitlem,
               xref = "x",
               yref = "paper",
-              xanchor = "center",  
-              yanchor = "bottom",    
-              showarrow = FALSE 
-            ),  
-            list( 
+              xanchor = "center",
+              yanchor = "bottom",
+              showarrow = FALSE
+            ),
+            list(
               x = 0,
               y = 0.3,
-              text = UMAPtitlen,  
+              text = UMAPtitlen,
               xref = "x",
               yref = "paper",
-              xanchor = "center",  
-              yanchor = "bottom",  
-              showarrow = FALSE 
+              xanchor = "center",
+              yanchor = "bottom",
+              showarrow = FALSE
             ))
         }
         
@@ -8514,13 +8649,13 @@ server <- function(input, output, session) {
         
         #if (is.null(input$UMAPmatrixFile)) {
         #  k2 <- umap_plot_PreC_clin_react()
-        #  if (input$UMAPannotateSamps != " ") {
+        #  if (input$UMAPannotateSamps != "") {
         #    UMAPtitlek <- paste("Annotated by",input$UMAPannotateSamps)
         #  }
-        #  else if (input$UMAPannotateSamps == " ") {
+        #  else if (input$UMAPannotateSamps == "") {
         #    UMAPtitlek <- ""
         #  }
-        #  
+        #
         #  if (is.null(input$UMAPmetaFile) == T) {
         #    UMAPtitlek <- ""
         #  }
@@ -8556,13 +8691,13 @@ server <- function(input, output, session) {
         if (sampSubset == "Select All") {
           metaSub <- meta
           metaSub <- metaSub %>%
-            relocate(SampleName,all_of(sampGroupCriteria))
+            relocate(any_of(colnames(meta_react())[1]),all_of(sampGroupCriteria))
           metaSub
         }
         else if (sampSubset != "Select All") {
           metaSub <- meta[which(meta[,sampSubset] == sampGroupCriteria),]
           metaSub <- metaSub %>%
-            relocate(SampleName,sampGroupCriteria,sampSubset)
+            relocate(any_of(colnames(meta_react())[1]),sampGroupCriteria,sampSubset)
           metaSub
         }
         
@@ -8610,7 +8745,7 @@ server <- function(input, output, session) {
         metaSub <- VI_meta_subset_PreC()
         #if (!is.null(input$UMAPmatrixFile)) {
         FeatMat <- expr_raw()
-        FeatMat <- FeatMat[,metaSub$SampleName]
+        FeatMat <- FeatMat[,metaSub[,colnames(meta_react())[1]]]
         #sampSubset <- input$BPsampSubset
         sampCriteria <- input$BPsampCriteria
         #groupCriteria <- input$BPgroupCriteria
@@ -8619,7 +8754,7 @@ server <- function(input, output, session) {
         } else {featSelected <- input$BPFeatSelection}
         #featSelected <- input$BPFeatSelection
         sampSelected <- input$UMAPsampSelect
-        metaSub2 <- metaSub[,c("SampleName",groupCriteria)]
+        metaSub2 <- metaSub[,c(colnames(meta_react())[1],groupCriteria)]
         metaSub2[,groupCriteria] <- as.factor(metaSub2[,groupCriteria])
         
         if (length(featSelected) > 0){
@@ -8629,17 +8764,17 @@ server <- function(input, output, session) {
           #if (!is.null(input$UMAPmatrixFile)) {
           if (feature %in% rownames(FeatMat)) {
             feat_gene <- as.data.frame(t(FeatMat[feature,]))
-            feat_gene$SampleName <- rownames(feat_gene)
+            feat_gene[,colnames(meta_react())[1]] <- rownames(feat_gene)
           }
           if (!feature %in% rownames(FeatMat)) {
-            feat_gene <- as.data.frame(metaSub[,c("SampleName",feature)])
+            feat_gene <- as.data.frame(metaSub[,c(colnames(meta_react())[1],feature)])
           }
           #}
           #else if (is.null(input$UMAPmatrixFile)) {
-          #  feat_gene <- as.data.frame(metaSub[,c("SampleName",feature)])
+          #  feat_gene <- as.data.frame(metaSub[,c(colnames(meta_react())[1],feature)])
           #}
           
-          feat_gene2 <- merge(feat_gene,metaSub2,by = "SampleName", all = T)
+          feat_gene2 <- merge(feat_gene,metaSub2,by = colnames(meta_react())[1], all = T)
           feature_lab <- feature
           feattitle <- feature_lab
           if (logchoice == T) {
@@ -8670,7 +8805,7 @@ server <- function(input, output, session) {
             feat_gene2[,2] <- log2(feat_gene2[,2] + 1)
           }
           
-          colnames(feat_gene2) <- c("SampleName","FeatureName","Type")
+          colnames(feat_gene2) <- c(colnames(meta_react())[1],"FeatureName","Type")
           
           #if (!is.numeric(feat_gene2$FeatureName)) {
           if (VilOrBP == "Stacked Barplot") {
@@ -8850,7 +8985,7 @@ server <- function(input, output, session) {
         #  if (!is.null(input$BPgroupCriteria)) {
         metaSub <- VI_meta_subset_PreC()
         FeatMat <- expr_raw()
-        FeatMat <- FeatMat[,metaSub$SampleName]
+        FeatMat <- FeatMat[,metaSub[,colnames(meta_react())[1]]]
         logchoice <- input$log2Vplot
         if (is.null(input$BPFeatSelection)) {
           featSelected <- rownames(FeatMat)[1]
@@ -8862,12 +8997,12 @@ server <- function(input, output, session) {
           FeatMat <- as.data.frame(FeatMat)
           if (feature %in% rownames(FeatMat)) {
             feat_gene <- as.data.frame(t(FeatMat[feature,]))
-            feat_gene$SampleName <- rownames(feat_gene)
+            feat_gene[,colnames(meta_react())[1]] <- rownames(feat_gene)
           }
           if (!feature %in% rownames(FeatMat)) {
-            feat_gene <- as.data.frame(metaSub[,c("SampleName",feature)])
+            feat_gene <- as.data.frame(metaSub[,c(colnames(meta_react())[1],feature)])
           }
-          feat_gene2 <- merge(feat_gene,metaSub,by = "SampleName", all = T)
+          feat_gene2 <- merge(feat_gene,metaSub,by = colnames(meta_react())[1], all = T)
           if (logchoice == T) {
             #feat_gene2[which(feat_gene2[,2] < 0),2] <- 0
             feat_gene2[,2] <- log2(feat_gene2[,2] + 1)
@@ -8906,7 +9041,7 @@ server <- function(input, output, session) {
           Feat1 <- "Cluster"
         } else {Feat1 <- input$EnrichFeat1}
         if (is.null(input$EnrichFeat2)) {
-          Feat2 <- colnames(meta)[1]
+          Feat2 <- colnames(meta_react())[1]
         } else {Feat2 <- input$EnrichFeat2}
         if (is.null(input$EnrichVar1)) {
           Var1 <- levels(as.factor(meta[,Feat1]))[1]
@@ -8933,7 +9068,7 @@ server <- function(input, output, session) {
           Feat1 <- "Cluster"
         } else {Feat1 <- input$EnrichFeat1}
         if (is.null(input$EnrichFeat2)) {
-          Feat2 <- colnames(meta)[1]
+          Feat2 <- colnames(meta_react())[1]
         } else {Feat2 <- input$EnrichFeat2}
         if (is.null(input$EnrichVar1)) {
           Var1 <- levels(as.factor(meta[,Feat1]))[1]
@@ -8970,7 +9105,7 @@ server <- function(input, output, session) {
           Feat1 <- "Cluster"
         } else {Feat1 <- input$EnrichFeat1}
         if (is.null(input$EnrichFeat2)) {
-          Feat2 <- colnames(meta)[1]
+          Feat2 <- colnames(meta_react())[1]
         } else {Feat2 <- input$EnrichFeat2}
         if (is.null(input$EnrichVar1)) {
           Var1 <- levels(as.factor(meta[,Feat1]))[1]
@@ -8994,7 +9129,7 @@ server <- function(input, output, session) {
           Feat1 <- "Cluster"
         } else {Feat1 <- input$EnrichFeat1}
         if (is.null(input$EnrichFeat2)) {
-          Feat2 <- colnames(meta)[1]
+          Feat2 <- colnames(meta_react())[1]
         } else {Feat2 <- input$EnrichFeat2}
         if (is.null(input$EnrichVar1)) {
           Var1 <- levels(as.factor(meta[,Feat1]))[1]
@@ -9013,21 +9148,60 @@ server <- function(input, output, session) {
         VennObj <- Venn(VennList)
         VennData <- process_data(VennObj)
         
-        ggplot() +
-          # 1. region count layer
-          geom_sf(aes(fill = count), data = venn_region(VennData), show.legend = F) +
-          # 2. set edge layer
-          geom_sf(aes(color = name), data = venn_setedge(VennData), show.legend = F, size = 1) +
-          # 3. set label layer
-          geom_sf_text(aes(label = name), data = venn_setlabel(VennData), size = 6) +
-          # 4. region label layer
-          geom_sf_label(aes(label = paste0(count)), 
-                        data = venn_region(VennData),
-                        size = 6,
-                        alpha = 0.5) +
-          scale_fill_gradient(low = "#F4FAFE", high = "#4981BF")+
-          scale_color_manual(values = c("#F4FAFE","#F4FAFE"))+
-          theme_void()
+        if (packageVersion("ggVennDiagram") < package_version("1.4")) {
+          ggplot() +
+            # 1. region count layer
+            geom_sf(aes(fill = count), data = venn_region(VennData), show.legend = F) +
+            # 2. set edge layer
+            geom_sf(aes(color = name), data = venn_setedge(VennData), show.legend = F, size = 1) +
+            # 3. set label layer
+            geom_sf_text(aes(label = name), data = venn_setlabel(VennData), size = 6) +
+            # 4. region label layer
+            geom_sf_label(aes(label = paste0(count)),
+                          data = venn_region(VennData),
+                          size = 6,
+                          alpha = 0.5) +
+            scale_fill_gradient(low = "#F4FAFE", high = "#4981BF")+
+            scale_color_manual(values = c("#F4FAFE","#F4FAFE"))+
+            theme_void()
+        } else {
+          ggplot() +
+            # 1. region count layer
+            geom_polygon(aes(X, Y, fill = count, group = id),
+                         data = venn_regionedge(VennData), show.legend = F) +
+            # 2. set edge layer
+            geom_path(aes(X, Y, color = id, group = id),
+                      data = venn_setedge(VennData),
+                      show.legend = FALSE, linewidth = 1) +
+            # 3. set label layer
+            geom_text(aes(X, Y, label = name),
+                      data = venn_setlabel(VennData), size = 4) +
+            # 4. region label layer
+            geom_label(aes(X, Y, label = count),
+                       data = venn_regionlabel(VennData),
+                       size = 6,
+                       alpha = 0.5) +
+            scale_fill_gradient(low = "#F4FAFE", high = "#4981BF")+
+            scale_color_manual(values = c("#F4FAFE","#F4FAFE"))+
+            coord_flip() +
+            theme_void()
+        }
+        
+        #ggplot() +
+        #  # 1. region count layer
+        #  geom_sf(aes(fill = count), data = venn_region(VennData), show.legend = F) +
+        #  # 2. set edge layer
+        #  geom_sf(aes(color = name), data = venn_setedge(VennData), show.legend = F, size = 1) +
+        #  # 3. set label layer
+        #  geom_sf_text(aes(label = name), data = venn_setlabel(VennData), size = 6) +
+        #  # 4. region label layer
+        #  geom_sf_label(aes(label = paste0(count)),
+        #                data = venn_region(VennData),
+        #                size = 6,
+        #                alpha = 0.5) +
+        #  scale_fill_gradient(low = "#F4FAFE", high = "#4981BF")+
+        #  scale_color_manual(values = c("#F4FAFE","#F4FAFE"))+
+        #  theme_void()
         
       })
       
@@ -9046,7 +9220,7 @@ server <- function(input, output, session) {
           Feat1 <- "Cluster"
         } else {Feat1 <- input$EnrichFeat1}
         if (is.null(input$EnrichFeat2)) {
-          Feat2 <- colnames(meta)[1]
+          Feat2 <- colnames(meta_react())[1]
         } else {Feat2 <- input$EnrichFeat2}
         if (is.null(input$EnrichVar1)) {
           Var1 <- levels(as.factor(meta[,Feat1]))[1]
@@ -9401,7 +9575,7 @@ server <- function(input, output, session) {
           clusterTab <- umapClusterTable_react()
           cluster_choice <- input$KmeansClusterSubsetnum
           clusterTab_sub <- clusterTab[which(clusterTab$Cluster == cluster_choice),]
-          samples <- clusterTab_sub$SampleName
+          samples <- clusterTab_sub[,colnames(meta_react())[1]]
           expr_sub <- expr[,c(colnames(expr)[1],samples)]
           
           write_delim(expr_sub,file,delim = '\t')
@@ -9426,8 +9600,8 @@ server <- function(input, output, session) {
           clusterTab <- umapClusterTable_react()
           cluster_choice <- input$KmeansClusterSubsetnum
           clusterTab_sub <- clusterTab[which(clusterTab$Cluster == cluster_choice),]
-          samples <- clusterTab_sub$SampleName
-          meta_sub <- meta[which(meta$SampleName %in% samples),]
+          samples <- clusterTab_sub[,colnames(meta_react())[1]]
+          meta_sub <- meta[which(meta[,colnames(meta_react())[1]] %in% samples),]
           
           write_delim(meta_sub,file,delim = '\t')
         }
@@ -9442,7 +9616,7 @@ server <- function(input, output, session) {
 
 
 
-# Run the application 
+# Run the application
 shinyApp(ui = ui, server = server)
 
 
